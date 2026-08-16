@@ -1,0 +1,26 @@
+{
+  "name": "@noon/cart-service",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Shopping cart backed by Redis (ElastiCache in AWS)",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "start": "node dist/server.js",
+    "dev": "tsx watch src/server.ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "fastify": "^5.12.0",
+    "ioredis": "^5.11.1",
+    "zod": "^3.25.76"
+  },
+  "devDependencies": {
+    "@types/node": "^22.20.1",
+    "tsx": "^4.23.12",
+    "typescript": "^5.9.3"
+  }
+}

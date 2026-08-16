@@ -1,0 +1,124 @@
+@import "tailwindcss";
+
+/* ============================================================================
+   نظام التصميم — مطابق لهوية noon البصرية.
+   القيم مأخوذة من الواجهة الفعلية: الأصفر، لون النص الأساسي، ألوان الحالة.
+   ========================================================================= */
+
+@theme {
+  --color-noon-yellow: #feee00;
+  --color-noon-yellow-dark: #e5d600;
+  --color-noon-ink: #404553;
+  --color-noon-muted: #7e859b;
+  --color-noon-line: #e2e5f1;
+  --color-noon-bg: #f7f7fa;
+  --color-noon-blue: #3866df;
+  --color-noon-red: #ef3f4b;
+  --color-noon-green: #38ae04;
+  --color-noon-green-dark: #1e5b3a;
+  --color-noon-orange: #f3a847;
+  --color-noon-purple: #7e2ee8;
+  --color-noon-lilac: #e8e4fb;
+
+  --font-sans: var(--font-app), system-ui, -apple-system, "Segoe UI", sans-serif;
+
+  --radius-noon: 0.5rem;
+  --shadow-noon: 0 1px 3px rgb(64 69 83 / 0.08);
+  --shadow-noon-hover: 0 4px 16px rgb(64 69 83 / 0.14);
+}
+
+:root {
+  color-scheme: light;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  background: var(--color-noon-bg);
+  color: var(--color-noon-ink);
+  -webkit-font-smoothing: antialiased;
+}
+
+/* الأرقام والأسعار لاتينية دائمًا حتى في الواجهة العربية — أسهل في المقارنة */
+.tabular {
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum";
+  direction: ltr;
+  unicode-bidi: isolate;
+}
+
+:focus-visible {
+  outline: 2px solid var(--color-noon-blue);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+/*
+ * الأدوات التالية مكتوبة كـ CSS عادي لا عبر `@utility`.
+ * السبب عملي: أدوات Tailwind v4 لا تُصدِر المحددات المتداخلة
+ * (`> *` و `::-webkit-scrollbar`)، فتُولَّد الفئة فارغة بلا أي أثر.
+ */
+
+/* شريط تمرير أفقي مخفي للكاروسيلات */
+.scrollbar-none {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.scrollbar-none::-webkit-scrollbar {
+  display: none;
+}
+
+/*
+ * شارة express المائلة.
+ * noon تستخدم متوازي أضلاع — نُنفّذه بـ skew على العنصر وعكسه على النص
+ * الداخلي حتى تبقى الحروف مستقيمة.
+ */
+.badge-skew {
+  transform: skewX(-12deg);
+}
+.badge-skew > * {
+  display: inline-block;
+  transform: skewX(12deg);
+}
+
+/* قص النص لسطرين — يمنع اختلاف ارتفاع البطاقات في الشبكة */
+.line-clamp-2-fixed {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  min-height: 2.5rem;
+}
+
+@utility card-noon {
+  background: white;
+  border-radius: var(--radius-noon);
+  border: 1px solid var(--color-noon-line);
+}
+
+@utility skeleton {
+  background: linear-gradient(
+    90deg,
+    var(--color-noon-line) 25%,
+    color-mix(in srgb, var(--color-noon-line) 45%, white) 50%,
+    var(--color-noon-line) 75%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.4s ease-in-out infinite;
+}
+
+@keyframes shimmer {
+  0%   { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

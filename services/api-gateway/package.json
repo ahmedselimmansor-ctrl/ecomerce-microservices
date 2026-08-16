@@ -1,0 +1,35 @@
+{
+  "name": "@noon/api-gateway",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Edge BFF: routing, auth, rate limiting, response aggregation and caching",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "start": "node dist/server.js",
+    "dev": "tsx watch src/server.ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@fastify/compress": "^9.2.0",
+    "@fastify/cors": "^11.3.0",
+    "@fastify/helmet": "^13.1.0",
+    "@fastify/rate-limit": "^11.2.0",
+    "@fastify/reply-from": "^12.6.4",
+    "fastify": "^5.12.0",
+    "fastify-plugin": "^6.0.0",
+    "ioredis": "^5.11.1",
+    "jose": "^6.2.8",
+    "pino": "^9.14.0",
+    "undici": "^7.29.0",
+    "zod": "^3.25.76"
+  },
+  "devDependencies": {
+    "@types/node": "^22.20.1",
+    "tsx": "^4.23.12",
+    "typescript": "^5.9.3"
+  }
+}

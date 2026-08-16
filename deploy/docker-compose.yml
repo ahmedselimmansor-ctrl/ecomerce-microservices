@@ -1,0 +1,372 @@
+# ============================================================================
+#  Noon Clone — full local stack
+#  make up
+#
+#  كل حاوية هنا لها مقابل مُدار على AWS (انظر docs/02-aws-services.md):
+#    postgres  → Amazon Aurora PostgreSQL      mongo      → Amazon DocumentDB
+#    redis     → Amazon ElastiCache            kafka      → Amazon MSK
+#    opensearch→ Amazon OpenSearch Service     localstack → S3/SNS/SQS/Secrets
+#    mailpit   → Amazon SES
+# ============================================================================
+
+name: noon
+
+x-common: &common
+  restart: unless-stopped
+  networks: [noon]
+  logging:
+    driver: json-file
+    options: { max-size: "10m", max-file: "3" }
+
+x-java-env: &java-env
+  POSTGRES_HOST: postgres
+  POSTGRES_PORT: "5432"
+  POSTGRES_USER: ${POSTGRES_USER:-noon}
+  POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-noon_local_pw}
+  KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+  JWT_SECRET: ${JWT_SECRET:?JWT_SECRET is required}
+  LOG_LEVEL: ${LOG_LEVEL:-INFO}
+  SPRING_PROFILES_ACTIVE: docker
+
+services:
+
+  # ------------------------------------------------------------ data stores
+
+  postgres:
+    <<: *common
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-noon}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-noon_local_pw}
+      POSTGRES_DB: postgres
+    ports: ["5432:5432"]
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./init/postgres-init.sh:/docker-entrypoint-initdb.d/10-create-databases.sh:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-noon}"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  mongo:
+    <<: *common
+    image: mongo:7
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: ${MONGO_INITDB_ROOT_USERNAME:-noon}
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_INITDB_ROOT_PASSWORD:-noon_local_pw}
+    ports: ["27017:27017"]
+    volumes:
+      - mongodata:/data/db
+    healthcheck:
+      test: ["CMD", "mongosh", "--quiet", "--eval", "db.adminCommand('ping').ok"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+
+  redis:
+    <<: *common
+    image: redis:7-alpine
+    command: >
+      redis-server
+      --appendonly yes
+      --maxmemory 512mb
+      --maxmemory-policy allkeys-lru
+    ports: ["6379:6379"]
+    volumes:
+      - redisdata:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  kafka:
+    <<: *common
+    image: apache/kafka:3.8.1
+    environment:
+      # وضع KRaft — بلا ZooKeeper، وهو ما تستخدمه MSK الحديثة أيضًا
+      KAFKA_NODE_ID: 1
+      KAFKA_PROCESS_ROLES: broker,controller
+      KAFKA_LISTENERS: PLAINTEXT://:9092,CONTROLLER://:9093,EXTERNAL://:29092
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092,EXTERNAL://localhost:29092
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,CONTROLLER:PLAINTEXT,EXTERNAL:PLAINTEXT
+      KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+      KAFKA_CONTROLLER_QUORUM_VOTERS: 1@kafka:9093
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
+      KAFKA_NUM_PARTITIONS: "3"
+      CLUSTER_ID: noon-local-cluster-0001
+    ports: ["29092:29092"]
+    volumes:
+      - kafkadata:/var/lib/kafka/data
+    healthcheck:
+      test: ["CMD-SHELL", "/opt/kafka/bin/kafka-broker-api-versions.sh --bootstrap-server localhost:9092 >/dev/null 2>&1"]
+      interval: 10s
+      timeout: 8s
+      retries: 20
+      start_period: 30s
+
+  opensearch:
+    <<: *common
+    image: opensearchproject/opensearch:2.18.0
+    environment:
+      discovery.type: single-node
+      bootstrap.memory_lock: "true"
+      OPENSEARCH_JAVA_OPTS: "-Xms512m -Xmx512m"
+      DISABLE_SECURITY_PLUGIN: "true"
+      DISABLE_INSTALL_DEMO_CONFIG: "true"
+    ulimits:
+      memlock: { soft: -1, hard: -1 }
+      nofile: { soft: 65536, hard: 65536 }
+    ports: ["9200:9200"]
+    volumes:
+      - osdata:/usr/share/opensearch/data
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://localhost:9200/_cluster/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 20
+      start_period: 30s
+
+  # -------------------------------------------------------- AWS emulation
+
+  localstack:
+    <<: *common
+    image: localstack/localstack:3.8
+    environment:
+      SERVICES: s3,sns,sqs,secretsmanager,dynamodb
+      DEBUG: "0"
+      PERSISTENCE: "0"
+    ports: ["4566:4566"]
+    volumes:
+      - ./init/localstack-init.sh:/etc/localstack/init/ready.d/init.sh:ro
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://localhost:4566/_localstack/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 15
+
+  mailpit:
+    <<: *common
+    image: axllent/mailpit:latest
+    ports:
+      - "1025:1025"   # SMTP
+      - "8025:8025"   # الواجهة
+    environment:
+      MP_MAX_MESSAGES: "500"
+
+  # ----------------------------------------------------------- dev tooling
+
+  kafka-ui:
+    <<: *common
+    image: provectuslabs/kafka-ui:latest
+    depends_on:
+      kafka: { condition: service_healthy }
+    environment:
+      KAFKA_CLUSTERS_0_NAME: noon-local
+      KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: kafka:9092
+      DYNAMIC_CONFIG_ENABLED: "true"
+    ports: ["8090:8080"]
+
+  opensearch-dashboards:
+    <<: *common
+    image: opensearchproject/opensearch-dashboards:2.18.0
+    depends_on:
+      opensearch: { condition: service_healthy }
+    environment:
+      OPENSEARCH_HOSTS: '["http://opensearch:9200"]'
+      DISABLE_SECURITY_DASHBOARDS_PLUGIN: "true"
+    ports: ["5601:5601"]
+
+  # ------------------------------------------------------------- services
+
+  identity-service:
+    <<: *common
+    build: ../services/identity-service
+    image: noon/identity-service:dev
+    depends_on:
+      postgres: { condition: service_healthy }
+    environment:
+      <<: *java-env
+      POSTGRES_DB_IDENTITY: ${POSTGRES_DB_IDENTITY:-noon_identity}
+      JWT_ACCESS_TTL_SECONDS: ${JWT_ACCESS_TTL_SECONDS:-900}
+      JWT_REFRESH_TTL_SECONDS: ${JWT_REFRESH_TTL_SECONDS:-2592000}
+    ports: ["8081:8081"]
+
+  catalog-service:
+    <<: *common
+    build: ../services/catalog-service
+    image: noon/catalog-service:dev
+    depends_on:
+      mongo: { condition: service_healthy }
+      redis: { condition: service_healthy }
+      kafka: { condition: service_healthy }
+    environment:
+      MONGO_URI: mongodb://${MONGO_INITDB_ROOT_USERNAME:-noon}:${MONGO_INITDB_ROOT_PASSWORD:-noon_local_pw}@mongo:27017/noon_catalog?authSource=admin
+      REDIS_HOST: redis
+      REDIS_PORT: "6379"
+      KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+      LOG_LEVEL: ${LOG_LEVEL:-INFO}
+    ports: ["8082:8082"]
+
+  inventory-service:
+    <<: *common
+    build: ../services/inventory-service
+    image: noon/inventory-service:dev
+    depends_on:
+      postgres: { condition: service_healthy }
+      kafka: { condition: service_healthy }
+    environment:
+      <<: *java-env
+      POSTGRES_DB_INVENTORY: ${POSTGRES_DB_INVENTORY:-noon_inventory}
+    ports: ["8085:8085"]
+
+  order-service:
+    <<: *common
+    build: ../services/order-service
+    image: noon/order-service:dev
+    depends_on:
+      postgres: { condition: service_healthy }
+      kafka: { condition: service_healthy }
+      catalog-service: { condition: service_started }
+    environment:
+      <<: *java-env
+      POSTGRES_DB_ORDER: ${POSTGRES_DB_ORDER:-noon_order}
+      SERVICE_URL_CATALOG: http://catalog-service:8082
+    ports: ["8083:8083"]
+
+  payment-service:
+    <<: *common
+    build: ../services/payment-service
+    image: noon/payment-service:dev
+    depends_on:
+      postgres: { condition: service_healthy }
+      kafka: { condition: service_healthy }
+    environment:
+      <<: *java-env
+      POSTGRES_DB_PAYMENT: ${POSTGRES_DB_PAYMENT:-noon_payment}
+      PAYMENT_PROVIDER: mock
+      # 10% فشل مُصطنع — لاختبار مسار التعويض في الـ Saga فعليًا
+      PAYMENT_MOCK_FAILURE_RATE: ${PAYMENT_MOCK_FAILURE_RATE:-0.1}
+    ports: ["8084:8084"]
+
+  cart-service:
+    <<: *common
+    build: ../services/cart-service
+    image: noon/cart-service:dev
+    depends_on:
+      redis: { condition: service_healthy }
+    environment:
+      REDIS_URL: redis://redis:6379
+      PORT: "8086"
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+    ports: ["8086:8086"]
+
+  search-service:
+    <<: *common
+    build: ../services/search-service
+    image: noon/search-service:dev
+    depends_on:
+      opensearch: { condition: service_healthy }
+      kafka: { condition: service_healthy }
+    environment:
+      OPENSEARCH_URL: http://opensearch:9200
+      OPENSEARCH_INDEX: ${OPENSEARCH_INDEX:-products-v1}
+      KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+      LOG_LEVEL: ${LOG_LEVEL:-INFO}
+    ports: ["8087:8087"]
+
+  recommendation-service:
+    <<: *common
+    build: ../services/recommendation-service
+    image: noon/recommendation-service:dev
+    depends_on:
+      redis: { condition: service_healthy }
+    environment:
+      REDIS_URL: redis://redis:6379
+      CATALOG_URL: http://catalog-service:8082
+      AWS_REGION: ${AWS_REGION:-me-south-1}
+      # فراغ ⇒ يعمل المحرك الاحتياطي المحلي بدل Amazon Personalize
+      PERSONALIZE_CAMPAIGN_USER: ${PERSONALIZE_CAMPAIGN_ARN:-}
+      PERSONALIZE_TRACKING_ID: ${PERSONALIZE_TRACKING_ID:-}
+      LOG_LEVEL: ${LOG_LEVEL:-INFO}
+    ports: ["8088:8088"]
+
+  notification-service:
+    <<: *common
+    build: ../services/notification-service
+    image: noon/notification-service:dev
+    depends_on:
+      kafka: { condition: service_healthy }
+      mailpit: { condition: service_started }
+    environment:
+      KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+      # أوامر الإشعار الصريحة فقط — إضافة order.events.v1 تُنتج إيميلًا مزدوجًا
+      KAFKA_TOPICS: notification.commands.v1
+      SERVICE_URL_IDENTITY: http://identity-service:8081
+      SMTP_HOST: mailpit
+      SMTP_PORT: "1025"
+      MAIL_FROM: noreply@noon.local
+      PORT: "8089"
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+    ports: ["8089:8089"]
+
+  api-gateway:
+    <<: *common
+    build: ../services/api-gateway
+    image: noon/api-gateway:dev
+    depends_on:
+      redis: { condition: service_healthy }
+      identity-service: { condition: service_started }
+      catalog-service: { condition: service_started }
+    environment:
+      PORT: "8080"
+      JWT_SECRET: ${JWT_SECRET:?JWT_SECRET is required}
+      REDIS_URL: redis://redis:6379
+      CORS_ORIGINS: http://localhost:3000
+      SERVICE_URL_IDENTITY: http://identity-service:8081
+      SERVICE_URL_CATALOG: http://catalog-service:8082
+      SERVICE_URL_ORDER: http://order-service:8083
+      SERVICE_URL_PAYMENT: http://payment-service:8084
+      SERVICE_URL_INVENTORY: http://inventory-service:8085
+      SERVICE_URL_CART: http://cart-service:8086
+      SERVICE_URL_SEARCH: http://search-service:8087
+      SERVICE_URL_RECOMMENDATION: http://recommendation-service:8088
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+    ports: ["8080:8080"]
+
+  # ------------------------------------------------------------- frontend
+
+  web:
+    <<: *common
+    build:
+      context: ../frontend/web
+      args:
+        NEXT_PUBLIC_API_URL: http://localhost:8080
+    image: noon/web:dev
+    depends_on:
+      api-gateway: { condition: service_started }
+    environment:
+      NODE_ENV: production
+      # المتصفح ينادي localhost؛ الـ SSR ينادي داخل الشبكة
+      NEXT_PUBLIC_API_URL: http://localhost:8080
+      INTERNAL_API_URL: http://api-gateway:8080
+      NEXT_PUBLIC_DEFAULT_LOCALE: ${NEXT_PUBLIC_DEFAULT_LOCALE:-ar}
+      NEXT_PUBLIC_DEFAULT_CURRENCY: ${NEXT_PUBLIC_DEFAULT_CURRENCY:-AED}
+    ports: ["3000:3000"]
+
+networks:
+  noon:
+    driver: bridge
+
+volumes:
+  pgdata:
+  mongodata:
+  redisdata:
+  kafkadata:
+  osdata:

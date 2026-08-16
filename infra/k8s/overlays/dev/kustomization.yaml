@@ -1,0 +1,85 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: noon
+
+resources:
+  - ../../base
+
+# نسخة واحدة لكل خدمة في dev — الغرض التحقق لا التوفر
+replicas:
+  - name: api-gateway
+    count: 1
+  - name: identity-service
+    count: 1
+  - name: catalog-service
+    count: 1
+  - name: order-service
+    count: 1
+  - name: payment-service
+    count: 1
+  - name: inventory-service
+    count: 1
+  - name: cart-service
+    count: 1
+  - name: search-service
+    count: 1
+  - name: recommendation-service
+    count: 1
+  - name: notification-service
+    count: 1
+  - name: web
+    count: 1
+
+patches:
+  # موارد أقل بكثير: عقدة واحدة تكفي لكل شيء
+  - target:
+      kind: Deployment
+    patch: |-
+      - op: replace
+        path: /spec/template/spec/containers/0/resources/requests/cpu
+        value: 50m
+      - op: replace
+        path: /spec/template/spec/containers/0/resources/requests/memory
+        value: 192Mi
+
+  # HPA و PDB بلا معنى مع نسخة واحدة
+  - target:
+      kind: HorizontalPodAutoscaler
+    patch: |-
+      - op: replace
+        path: /spec/minReplicas
+        value: 1
+      - op: replace
+        path: /spec/maxReplicas
+        value: 3
+
+  - target:
+      kind: PodDisruptionBudget
+    patch: |-
+      - op: replace
+        path: /spec/minAvailable
+        value: 0
+
+  # Spot لكل شيء في dev — التوفير أهم من الاستمرارية هنا.
+  # نستهدف الخدمات الحرجة فقط لأنها وحدها تحمل nodeSelector في الأساس،
+  # و`op: remove` يفشل على مسار غير موجود.
+  - target:
+      kind: Deployment
+      name: (api-gateway|identity-service|order-service|payment-service|inventory-service|web)
+    patch: |-
+      - op: remove
+        path: /spec/template/spec/nodeSelector
+
+  # الـ ConfigMap مورد عادي في الأساس لا generator، فنعدّله بترقيع
+  # لا بـ configMapGenerator (الذي يدمج المولّدات فقط)
+  - target:
+      kind: ConfigMap
+      name: noon-config
+    patch: |-
+      - op: replace
+        path: /data/LOG_LEVEL
+        value: DEBUG
+      - op: replace
+        path: /data/DB_POOL_MAX
+        value: "5"

@@ -1,0 +1,9 @@
+fastapi==0.115.5
+uvicorn[standard]==0.32.1
+boto3==1.35.71
+redis==5.2.0
+httpx==0.28.0
+pydantic==2.10.2
+pydantic-settings==2.6.1
+prometheus-fastapi-instrumentator==7.0.0
+orjson==3.10.12

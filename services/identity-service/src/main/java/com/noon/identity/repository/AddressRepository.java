@@ -1,0 +1,24 @@
+package com.noon.identity.repository;
+
+import com.noon.identity.domain.Address;
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
+
+import java.util.List;
+import java.util.Optional;
+import java.util.UUID;
+
+public interface AddressRepository extends JpaRepository<Address, UUID> {
+
+    List<Address> findByUserIdOrderByIsDefaultDescCreatedAtDesc(UUID userId);
+
+    Optional<Address> findByIdAndUserId(UUID id, UUID userId);
+
+    long countByUserId(UUID userId);
+
+    @Modifying(clearAutomatically = true, flushAutomatically = true)
+    @Query("update Address a set a.isDefault = false where a.userId = :userId")
+    void clearDefaults(@Param("userId") UUID userId);
+}

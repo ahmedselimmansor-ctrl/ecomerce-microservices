@@ -1,0 +1,94 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: noon
+
+resources:
+  - ../../base
+
+# التوسّع بعمق طابور Kafka — يتطلب تثبيت مشغّل KEDA في العنقود
+components:
+  - ../../components/keda
+
+# الصور من ECR بوسم إصدار ثابت لا "latest".
+# النشر يبدّل الوسم عبر `kustomize edit set image` في خط الـ CI.
+images:
+  - name: noon/api-gateway
+    newName: ACCOUNT.dkr.ecr.me-south-1.amazonaws.com/noon/api-gateway
+    newTag: v1.0.0
+  - name: noon/identity-service
+    newName: ACCOUNT.dkr.ecr.me-south-1.amazonaws.com/noon/identity-service
+    newTag: v1.0.0
+  - name: noon/catalog-service
+    newName: ACCOUNT.dkr.ecr.me-south-1.amazonaws.com/noon/catalog-service
+    newTag: v1.0.0
+  - name: noon/order-service
+    newName: ACCOUNT.dkr.ecr.me-south-1.amazonaws.com/noon/order-service
+    newTag: v1.0.0
+  - name: noon/payment-service
+    newName: ACCOUNT.dkr.ecr.me-south-1.amazonaws.com/noon/payment-service
+    newTag: v1.0.0
+  - name: noon/inventory-service
+    newName: ACCOUNT.dkr.ecr.me-south-1.amazonaws.com/noon/inventory-service
+    newTag: v1.0.0
+  - name: noon/cart-service
+    newName: ACCOUNT.dkr.ecr.me-south-1.amazonaws.com/noon/cart-service
+    newTag: v1.0.0
+  - name: noon/search-service
+    newName: ACCOUNT.dkr.ecr.me-south-1.amazonaws.com/noon/search-service
+    newTag: v1.0.0
+  - name: noon/recommendation-service
+    newName: ACCOUNT.dkr.ecr.me-south-1.amazonaws.com/noon/recommendation-service
+    newTag: v1.0.0
+  - name: noon/notification-service
+    newName: ACCOUNT.dkr.ecr.me-south-1.amazonaws.com/noon/notification-service
+    newTag: v1.0.0
+  - name: noon/web
+    newName: ACCOUNT.dkr.ecr.me-south-1.amazonaws.com/noon/web
+    newTag: v1.0.0
+
+patches:
+  # الخدمات الحرجة تبدأ بعدد أعلى من النسخ
+  - target:
+      kind: Deployment
+      name: api-gateway
+    patch: |-
+      - op: replace
+        path: /spec/replicas
+        value: 6
+
+  - target:
+      kind: Deployment
+      name: web
+    patch: |-
+      - op: replace
+        path: /spec/replicas
+        value: 6
+
+  - target:
+      kind: Deployment
+      name: catalog-service
+    patch: |-
+      - op: replace
+        path: /spec/replicas
+        value: 6
+
+  # حد أدنى أعلى للتوسّع التلقائي على مسار الشراء
+  - target:
+      kind: HorizontalPodAutoscaler
+      name: order-service
+    patch: |-
+      - op: replace
+        path: /spec/minReplicas
+        value: 4
+      - op: replace
+        path: /spec/maxReplicas
+        value: 60
+
+  - target:
+      kind: ConfigMap
+      name: noon-config
+    patch: |-
+      - op: replace
+        path: /data/DB_POOL_MAX
+        value: "20"

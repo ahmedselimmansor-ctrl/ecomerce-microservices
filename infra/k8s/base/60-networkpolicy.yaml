@@ -1,0 +1,144 @@
+# ============================================================================
+#  سياسات الشبكة — الحاجز الحقيقي أمام الوصول الجانبي.
+#
+#  المبدأ: منع كل شيء افتراضيًا، ثم السماح بالمسارات المعروفة فقط.
+#  هذا ما يجعل نقاط `/internal/` آمنة فعلًا لا مجرد محجوبة عند الـ gateway.
+#
+#  يتطلب CNI يدعم NetworkPolicy (Calico أو Cilium فوق VPC CNI).
+# ============================================================================
+
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: default-deny-ingress
+  namespace: noon
+spec:
+  podSelector: {}
+  policyTypes: [Ingress]
+---
+# DNS مسموح للجميع، وإلا لن يعمل أي اكتشاف للخدمات
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-dns
+  namespace: noon
+spec:
+  podSelector: {}
+  policyTypes: [Egress]
+  egress:
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: kube-system
+      ports:
+        - protocol: UDP
+          port: 53
+        - protocol: TCP
+          port: 53
+---
+# الـ gateway والواجهة يستقبلان من الـ ALB (خارج الـ namespace)
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-ingress-to-edge
+  namespace: noon
+spec:
+  podSelector:
+    matchExpressions:
+      - key: app.kubernetes.io/name
+        operator: In
+        values: [api-gateway, web]
+  policyTypes: [Ingress]
+  ingress:
+    - from:
+        - ipBlock:
+            # نطاق الـ VPC — الـ ALB يعمل داخله
+            cidr: 10.0.0.0/16
+      ports:
+        - protocol: TCP
+          port: 8080
+        - protocol: TCP
+          port: 3000
+---
+# خدمات المجال تستقبل من الـ gateway فقط.
+# هذا ما يمنع الوصول المباشر إلى /internal/ حتى من داخل العنقود.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-gateway-to-services
+  namespace: noon
+spec:
+  podSelector:
+    matchExpressions:
+      - key: app.kubernetes.io/name
+        operator: In
+        values:
+          - identity-service
+          - catalog-service
+          - order-service
+          - payment-service
+          - inventory-service
+          - cart-service
+          - search-service
+          - recommendation-service
+  policyTypes: [Ingress]
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/name: api-gateway
+    # نداءات بين الخدمات المسموح بها صراحةً
+    - from:
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/name: order-service
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/name: recommendation-service
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/name: notification-service
+    # جمع المقاييس
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: monitoring
+---
+# الخروج إلى قواعد البيانات وخدمات AWS
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-egress-to-data
+  namespace: noon
+spec:
+  podSelector: {}
+  policyTypes: [Egress]
+  egress:
+    - to:
+        - ipBlock:
+            cidr: 10.0.0.0/16
+      ports:
+        - protocol: TCP
+          port: 5432   # Aurora PostgreSQL
+        - protocol: TCP
+          port: 27017  # DocumentDB
+        - protocol: TCP
+          port: 6379   # ElastiCache
+        - protocol: TCP
+          port: 9094   # MSK TLS
+        - protocol: TCP
+          port: 9098   # MSK IAM
+        - protocol: TCP
+          port: 443    # OpenSearch و VPC endpoints
+    # نداءات بين الخدمات داخل الـ namespace
+    - to:
+        - podSelector: {}
+    # HTTPS للخارج (بوابات الدفع) — عبر NAT
+    - to:
+        - ipBlock:
+            cidr: 0.0.0.0/0
+            except:
+              - 169.254.169.254/32  # حجب IMDS: يمنع سرقة أوراق اعتماد العقدة
+      ports:
+        - protocol: TCP
+          port: 443

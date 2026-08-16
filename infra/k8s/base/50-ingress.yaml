@@ -1,0 +1,70 @@
+# ============================================================================
+#  Ingress عبر AWS Load Balancer Controller.
+#
+#  ينشئ ALB حقيقيًا في الشبكات العامة ويوجّه إلى الـ pods مباشرة
+#  (target-type: ip) — بلا قفزة NodePort إضافية، فيقلّ زمن الاستجابة.
+# ============================================================================
+
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: noon
+  namespace: noon
+  annotations:
+    kubernetes.io/ingress.class: alb
+    alb.ingress.kubernetes.io/scheme: internet-facing
+    alb.ingress.kubernetes.io/target-type: ip
+    alb.ingress.kubernetes.io/listen-ports: '[{"HTTP":80},{"HTTPS":443}]'
+    alb.ingress.kubernetes.io/ssl-redirect: "443"
+    alb.ingress.kubernetes.io/ssl-policy: ELBSecurityPolicy-TLS13-1-2-2021-06
+    alb.ingress.kubernetes.io/certificate-arn: "REPLACE_WITH_ACM_CERT_ARN"
+
+    # فحص الصحة على مستوى الـ target group
+    alb.ingress.kubernetes.io/healthcheck-path: /health/live
+    alb.ingress.kubernetes.io/healthcheck-interval-seconds: "15"
+    alb.ingress.kubernetes.io/healthy-threshold-count: "2"
+    alb.ingress.kubernetes.io/unhealthy-threshold-count: "3"
+
+    # الإلغاء التدريجي: ALB يتوقف عن إرسال طلبات جديدة وينتظر الجارية
+    alb.ingress.kubernetes.io/target-group-attributes: >-
+      deregistration_delay.timeout_seconds=30,
+      load_balancing.algorithm.type=least_outstanding_requests,
+      stickiness.enabled=false
+
+    alb.ingress.kubernetes.io/load-balancer-attributes: >-
+      idle_timeout.timeout_seconds=60,
+      routing.http2.enabled=true,
+      access_logs.s3.enabled=true,
+      access_logs.s3.bucket=REPLACE_WITH_LOGS_BUCKET,
+      access_logs.s3.prefix=alb
+
+    alb.ingress.kubernetes.io/wafv2-acl-arn: "REPLACE_WITH_WAF_ARN"
+    alb.ingress.kubernetes.io/tags: Project=noon-clone,ManagedBy=kubernetes
+
+spec:
+  rules:
+    - http:
+        paths:
+          # ترتيب المسارات مهم: الأكثر تحديدًا أولًا
+          - path: /api
+            pathType: Prefix
+            backend:
+              service:
+                name: api-gateway
+                port:
+                  number: 8080
+          - path: /health
+            pathType: Prefix
+            backend:
+              service:
+                name: api-gateway
+                port:
+                  number: 8080
+          # كل ما تبقّى يذهب لواجهة Next.js
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: web
+                port:
+                  number: 3000

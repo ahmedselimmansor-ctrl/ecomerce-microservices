@@ -1,0 +1,198 @@
+# أكثر الخدمات قراءةً — يتوسع مع حركة التصفح
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: catalog-service
+  namespace: noon
+  labels:
+    app.kubernetes.io/name: catalog-service
+    app.kubernetes.io/part-of: noon
+spec:
+  replicas: 3
+  revisionHistoryLimit: 3
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      # لا نقلّل الطاقة أثناء النشر: pod جديد يصعد قبل أن ينزل القديم
+      maxUnavailable: 0
+      maxSurge: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: catalog-service
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: catalog-service
+        app.kubernetes.io/part-of: noon
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "8082"
+        prometheus.io/path: "/actuator/prometheus"
+    spec:
+      serviceAccountName: catalog-service
+      # مهلة الإنهاء تسمح بإنهاء الطلبات الجارية قبل إغلاق العملية
+      terminationGracePeriodSeconds: 45
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 10001
+        fsGroup: 10001
+        seccompProfile:
+          type: RuntimeDefault
+      # توزيع النسخ على نطاقات التوفر: سقوط نطاق لا يُسقط الخدمة
+      topologySpreadConstraints:
+        - maxSkew: 1
+          topologyKey: topology.kubernetes.io/zone
+          whenUnsatisfiable: ScheduleAnyway
+          labelSelector:
+            matchLabels:
+              app.kubernetes.io/name: catalog-service
+        - maxSkew: 1
+          topologyKey: kubernetes.io/hostname
+          whenUnsatisfiable: ScheduleAnyway
+          labelSelector:
+            matchLabels:
+              app.kubernetes.io/name: catalog-service
+      containers:
+        - name: catalog-service
+          image: noon/catalog-service:dev
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: http
+              containerPort: 8082
+          env:
+            - name: LOG_LEVEL
+              valueFrom: { configMapKeyRef: { name: noon-config, key: LOG_LEVEL } }
+            - name: AWS_REGION
+              valueFrom: { configMapKeyRef: { name: noon-config, key: AWS_REGION } }
+            - name: KAFKA_BOOTSTRAP_SERVERS
+              valueFrom: { configMapKeyRef: { name: noon-config, key: KAFKA_BOOTSTRAP_SERVERS } }
+            - name: REDIS_URL
+              valueFrom: { secretKeyRef: { name: noon-database, key: REDIS_URL } }
+            - name: MONGO_URI
+              valueFrom: { secretKeyRef: { name: noon-database, key: MONGO_URI } }
+          resources:
+            requests:
+              cpu: 300m
+              memory: 768Mi
+            limits:
+              # لا حد للـ CPU عمدًا في الخدمات الحساسة للزمن: الـ throttling
+              # يضاعف زمن الاستجابة أسوأ من الازدحام نفسه
+              cpu: 2000m
+              memory: 1536Mi
+          # startupProbe يمنح الإقلاع البطيء (JVM) وقتًا كافيًا
+          # دون إرخاء liveness بعد الإقلاع
+          startupProbe:
+            httpGet:
+              path: /actuator/health/liveness
+              port: http
+            periodSeconds: 5
+            failureThreshold: 36
+          livenessProbe:
+            httpGet:
+              path: /actuator/health/liveness
+              port: http
+            periodSeconds: 10
+            timeoutSeconds: 3
+            failureThreshold: 3
+          readinessProbe:
+            httpGet:
+              path: /actuator/health/readiness
+              port: http
+            periodSeconds: 5
+            timeoutSeconds: 3
+            failureThreshold: 3
+          lifecycle:
+            preStop:
+              exec:
+                # مهلة قصيرة قبل الإغلاق: تسمح لـ kube-proxy بإزالة الـ pod
+                # من جدول التوجيه قبل أن يتوقف عن القبول
+                command: ["sh", "-c", "sleep 5"]
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ["ALL"]
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
+      volumes:
+        - name: tmp
+          emptyDir:
+            sizeLimit: 256Mi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: catalog-service
+  namespace: noon
+  labels:
+    app.kubernetes.io/name: catalog-service
+  annotations:
+    # يوجّه الحركة لأقرب نسخة داخل نفس نطاق التوفر:
+    # يقلّل زمن الاستجابة وتكلفة نقل البيانات بين النطاقات
+    service.kubernetes.io/topology-mode: Auto
+spec:
+  type: ClusterIP
+  selector:
+    app.kubernetes.io/name: catalog-service
+  ports:
+    - name: http
+      port: 8082
+      targetPort: http
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: catalog-service
+  namespace: noon
+spec:
+  # يضمن بقاء أغلبية النسخ أثناء صيانة العُقد أو سحب Spot
+  minAvailable: 60%
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: catalog-service
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: catalog-service
+  namespace: noon
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: catalog-service
+  minReplicas: 3
+  maxReplicas: 30
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 65
+    - type: Resource
+      resource:
+        name: memory
+        target:
+          type: Utilization
+          averageUtilization: 75
+  behavior:
+    scaleUp:
+      # الصعود فوري: تأخير التوسّع أثناء ذروة مفاجئة يعني طلبات مفقودة
+      stabilizationWindowSeconds: 0
+      policies:
+        - type: Percent
+          value: 100
+          periodSeconds: 30
+        - type: Pods
+          value: 4
+          periodSeconds: 30
+      selectPolicy: Max
+    scaleDown:
+      # الهبوط بطيء: يتجنّب التذبذب (thrashing) بعد موجة قصيرة
+      stabilizationWindowSeconds: 300
+      policies:
+        - type: Percent
+          value: 20
+          periodSeconds: 60

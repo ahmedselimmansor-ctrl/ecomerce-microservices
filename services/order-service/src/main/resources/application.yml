@@ -1,0 +1,110 @@
+server:
+  port: 8083
+  shutdown: graceful
+
+spring:
+  application:
+    name: order-service
+  threads:
+    virtual:
+      enabled: true
+  lifecycle:
+    timeout-per-shutdown-phase: 30s
+  datasource:
+    url: jdbc:postgresql://${POSTGRES_HOST:localhost}:${POSTGRES_PORT:5432}/${POSTGRES_DB_ORDER:noon_order}
+    username: ${POSTGRES_USER:noon}
+    password: ${POSTGRES_PASSWORD:noon_local_pw}
+    hikari:
+      maximum-pool-size: ${DB_POOL_MAX:25}
+      minimum-idle: 3
+      connection-timeout: 3000
+  jpa:
+    open-in-view: false
+    hibernate:
+      ddl-auto: validate
+    properties:
+      hibernate.jdbc.batch_size: 50
+      hibernate.order_inserts: true
+      hibernate.order_updates: true
+  flyway:
+    enabled: true
+    baseline-on-migrate: true
+  kafka:
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
+      acks: all
+      retries: 5
+      properties:
+        enable.idempotence: true
+        spring.json.add.type.headers: false
+    consumer:
+      group-id: order-service
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      auto-offset-reset: earliest
+      enable-auto-commit: false
+    listener:
+      # manual مطلوب: بدونه لا تُحقن Acknowledgment في المستمع
+      # ويفشل الاستدعاء بـ invokeHandler Failed
+      ack-mode: manual
+      concurrency: 3
+
+noon:
+  topics:
+    order-events: order.events.v1
+    inventory-events: inventory.events.v1
+    payment-events: payment.events.v1
+    notifications: notification.commands.v1
+  outbox:
+    poll-delay-ms: 500
+    batch-size: 100
+    max-attempts: 10
+  services:
+    catalog-url: ${SERVICE_URL_CATALOG:http://localhost:8082}
+  order:
+    free-shipping-threshold-minor: 10000     # 100.00 AED
+    shipping-fee-minor: 1500                 # 15.00 AED
+    vat-percent: 5
+
+resilience4j:
+  circuitbreaker:
+    instances:
+      catalog:
+        slidingWindowSize: 30
+        minimumNumberOfCalls: 10
+        failureRateThreshold: 50
+        waitDurationInOpenState: 15s
+        permittedNumberOfCallsInHalfOpenState: 5
+  timelimiter:
+    instances:
+      catalog:
+        timeoutDuration: 2s
+  retry:
+    instances:
+      catalog:
+        maxAttempts: 3
+        waitDuration: 200ms
+        enableExponentialBackoff: true
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,prometheus,metrics
+  endpoint:
+    health:
+      probes:
+        enabled: true
+      group:
+        readiness:
+          include: db, readinessState
+  metrics:
+    tags:
+      service: order-service
+
+logging:
+  level:
+    root: INFO
+    com.noon: ${LOG_LEVEL:INFO}

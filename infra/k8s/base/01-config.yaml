@@ -1,0 +1,37 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: noon-config
+  namespace: noon
+data:
+  # ---- إعدادات عامة ----
+  AWS_REGION: "me-south-1"
+  LOG_LEVEL: "INFO"
+
+  # ---- اكتشاف الخدمات ----
+  # DNS داخل العنقود: <service>.<namespace>.svc.cluster.local
+  SERVICE_URL_IDENTITY: "http://identity-service.noon.svc.cluster.local:8081"
+  SERVICE_URL_CATALOG: "http://catalog-service.noon.svc.cluster.local:8082"
+  SERVICE_URL_ORDER: "http://order-service.noon.svc.cluster.local:8083"
+  SERVICE_URL_PAYMENT: "http://payment-service.noon.svc.cluster.local:8084"
+  SERVICE_URL_INVENTORY: "http://inventory-service.noon.svc.cluster.local:8085"
+  SERVICE_URL_CART: "http://cart-service.noon.svc.cluster.local:8086"
+  SERVICE_URL_SEARCH: "http://search-service.noon.svc.cluster.local:8087"
+  SERVICE_URL_RECOMMENDATION: "http://recommendation-service.noon.svc.cluster.local:8088"
+  CATALOG_URL: "http://catalog-service.noon.svc.cluster.local:8082"
+
+  # ---- Kafka (MSK) ----
+  # القيمة الحقيقية تُحقن من مخرجات Terraform عبر overlay
+  KAFKA_BOOTSTRAP_SERVERS: "REPLACE_WITH_MSK_BOOTSTRAP"
+
+  # ---- OpenSearch ----
+  OPENSEARCH_URL: "REPLACE_WITH_OPENSEARCH_ENDPOINT"
+  OPENSEARCH_INDEX: "products-v1"
+
+  # ---- سلوك التطبيق ----
+  JWT_ACCESS_TTL_SECONDS: "900"
+  JWT_REFRESH_TTL_SECONDS: "2592000"
+  DB_POOL_MAX: "15"
+
+  # مقياس مهم: عدد الـ pods × DB_POOL_MAX يجب أن يبقى تحت حد Aurora،
+  # ولهذا نمر عبر RDS Proxy الذي يوحّد التجميع.

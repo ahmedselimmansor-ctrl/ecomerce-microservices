@@ -1,0 +1,100 @@
+# ============================================================================
+#  KEDA — التوسّع بعمق الطابور لا بالـ CPU.
+#
+#  لماذا؟ مستهلك Kafka يقضي وقته منتظرًا لا حاسبًا، فاستهلاكه للـ CPU منخفض
+#  حتى عندما يتأخر آلاف الرسائل. HPA على CPU لن يوسّعه إطلاقًا. المقياس
+#  الصحيح هو consumer lag: كم رسالة تنتظر المعالجة.
+# ============================================================================
+
+apiVersion: keda.sh/v1alpha1
+kind: TriggerAuthentication
+metadata:
+  name: msk-iam
+  namespace: noon
+spec:
+  podIdentity:
+    provider: aws
+    identityOwner: workload
+---
+apiVersion: keda.sh/v1alpha1
+kind: ScaledObject
+metadata:
+  name: notification-service
+  namespace: noon
+spec:
+  scaleTargetRef:
+    name: notification-service
+  minReplicaCount: 2
+  maxReplicaCount: 30
+  pollingInterval: 15
+  cooldownPeriod: 300
+  triggers:
+    - type: kafka
+      metadata:
+        bootstrapServers: REPLACE_WITH_MSK_BOOTSTRAP
+        consumerGroup: notification-service
+        topic: notification.commands.v1
+        # نسخة إضافية لكل 500 رسالة متأخرة
+        lagThreshold: "500"
+        offsetResetPolicy: latest
+        sasl: aws_msk_iam
+        tls: enable
+      authenticationRef:
+        name: msk-iam
+---
+apiVersion: keda.sh/v1alpha1
+kind: ScaledObject
+metadata:
+  name: search-service-indexer
+  namespace: noon
+spec:
+  scaleTargetRef:
+    name: search-service
+  minReplicaCount: 2
+  maxReplicaCount: 12
+  pollingInterval: 20
+  cooldownPeriod: 300
+  triggers:
+    # مزيج مقصود: الفهرسة تتبع تأخّر Kafka، والبحث يتبع الـ CPU
+    - type: kafka
+      metadata:
+        bootstrapServers: REPLACE_WITH_MSK_BOOTSTRAP
+        consumerGroup: search-service
+        topic: catalog.product.v1
+        lagThreshold: "1000"
+        sasl: aws_msk_iam
+        tls: enable
+      authenticationRef:
+        name: msk-iam
+    - type: cpu
+      metricType: Utilization
+      metadata:
+        value: "70"
+---
+# مثال على التوسّع المجدول للأحداث المعروفة مسبقًا (White Friday)
+apiVersion: keda.sh/v1alpha1
+kind: ScaledObject
+metadata:
+  name: api-gateway-scheduled
+  namespace: noon
+  annotations:
+    description: >-
+      رفع الحد الأدنى قبل ذروة معروفة. التوسّع التفاعلي وحده متأخر جدًا
+      عند موجة تبدأ في ثوانٍ.
+spec:
+  scaleTargetRef:
+    name: api-gateway
+  minReplicaCount: 3
+  maxReplicaCount: 60
+  triggers:
+    - type: cron
+      metadata:
+        timezone: Asia/Dubai
+        # ساعة الذروة اليومية
+        start: "0 18 * * *"
+        end: "0 23 * * *"
+        desiredReplicas: "8"
+    - type: cpu
+      metricType: Utilization
+      metadata:
+        value: "65"

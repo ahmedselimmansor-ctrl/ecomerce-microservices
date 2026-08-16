@@ -1,0 +1,47 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: noon
+  labels:
+    name: noon
+    # يفرض معايير أمان الـ pod على مستوى الـ namespace:
+    # لا امتيازات، لا root، لا host namespaces
+    pod-security.kubernetes.io/enforce: restricted
+    pod-security.kubernetes.io/enforce-version: latest
+    pod-security.kubernetes.io/audit: restricted
+    pod-security.kubernetes.io/warn: restricted
+---
+apiVersion: v1
+kind: ResourceQuota
+metadata:
+  name: noon-quota
+  namespace: noon
+spec:
+  hard:
+    requests.cpu: "40"
+    requests.memory: 80Gi
+    limits.cpu: "80"
+    limits.memory: 160Gi
+    persistentvolumeclaims: "10"
+    # سقف عدد الـ pods يمنع حلقة توسّع خاطئة من التهام العنقود
+    pods: "200"
+---
+apiVersion: v1
+kind: LimitRange
+metadata:
+  name: noon-defaults
+  namespace: noon
+spec:
+  limits:
+    - type: Container
+      # أي حاوية بلا requests صريحة تحصل على هذه القيم،
+      # فلا يوجد pod بلا حصة معروفة للمجدول
+      default:
+        cpu: 500m
+        memory: 512Mi
+      defaultRequest:
+        cpu: 100m
+        memory: 256Mi
+      max:
+        cpu: "4"
+        memory: 8Gi
