@@ -61,22 +61,29 @@ export default async function HomePage() {
 
   return (
     <div className="mx-auto max-w-[1440px] space-y-6 px-4 py-4">
-      {/* --------------------------------------------------- promo strip */}
+      {/*
+        شريط شريك التقسيط. برتقالي VALU لون علامتها ولا يُعاد تلوينه — لكنه
+        يبقى داخل الشريط لا أرضيةً له: الأرضية بترولية كبقية الكروم، وإلا صار
+        الشريط أعلى صوتًا من العلامة نفسها فوق الطية.
+      */}
       <Link
         href="/category/electronics"
-        className="flex flex-wrap items-center justify-center gap-4 rounded-lg bg-[#ff6a13]
-                   px-6 py-4 text-white transition hover:brightness-105"
+        className="flex flex-wrap items-center justify-center gap-x-5 gap-y-2 rounded-lg
+                   bg-tc-brand-deep px-6 py-3.5 text-white
+                   ring-1 ring-inset ring-white/10 transition hover:bg-tc-brand"
       >
-        <span className="text-xl font-extrabold tracking-tight">VALU*</span>
+        <span className="font-display text-xl font-extrabold tracking-tight text-[#ff6a13]">
+          VALU*
+        </span>
         <span className="text-lg font-bold">50% discount on interest</span>
-        <span className="text-sm opacity-90">Up to 60 months</span>
+        <span className="text-sm text-white/70">Up to 60 months</span>
         <span className="rounded bg-white px-3 py-1 text-xs font-extrabold text-[#ff6a13]">
           0% PURCHASE FEES
         </span>
         <span className="rounded bg-white px-3 py-1 text-xs font-extrabold text-[#ff6a13]">
           0% DOWN PAYMENT
         </span>
-        <span className="text-xs opacity-80">*T&amp;Cs apply</span>
+        <span className="text-xs text-white/55">*T&amp;Cs apply</span>
       </Link>
 
       <HeroCarousel />

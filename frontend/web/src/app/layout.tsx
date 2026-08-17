@@ -19,7 +19,7 @@ const appFont = Cairo({
  */
 const displayFont = Bricolage_Grotesque({
   subsets: ['latin'],
-  variable: '--font-display',
+  variable: '--font-brand',
   display: 'swap',
   weight: ['500', '600', '800'],
 });

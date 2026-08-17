@@ -43,8 +43,13 @@
    * للّاتيني — الشعار والأرقام. الأرقام في متجر هي أكثر ما تُقرأ، فتستحق
    * وجهًا خاصًا بها.
    */
+  /*
+   * اسم متغيّر next/font يجب أن يخالف مفتاح Tailwind: لو تطابقا صار التعريف
+   * `--font-display: var(--font-display)` مرجعًا لنفسه، وهو باطل في CSS
+   * فيسقط الخط بصمت. لذلك: ‎--font-brand‎ يحمل الخط، ‎--font-display‎ يستهلكه.
+   */
   --font-sans: var(--font-app), system-ui, -apple-system, "Segoe UI", sans-serif;
-  --font-display: var(--font-display), var(--font-app), system-ui, sans-serif;
+  --font-display: var(--font-brand), var(--font-app), system-ui, sans-serif;
 
   --radius-tc: 0.625rem;
   --shadow-tc: 0 1px 2px rgb(16 36 43 / 0.06), 0 1px 3px rgb(16 36 43 / 0.05);
