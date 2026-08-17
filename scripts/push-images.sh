@@ -42,16 +42,16 @@ aws ecr get-login-password --region "$REGION" \
   | docker login --username AWS --password-stdin "$REGISTRY"
 
 echo "==> ensuring buildx builder"
-docker buildx inspect noon-builder >/dev/null 2>&1 \
-  || docker buildx create --name noon-builder --use --bootstrap
-docker buildx use noon-builder
+docker buildx inspect topchoice-builder >/dev/null 2>&1 \
+  || docker buildx create --name topchoice-builder --use --bootstrap
+docker buildx use topchoice-builder
 
 FAILED=()
 
 for entry in "${SERVICES[@]}"; do
   name="${entry%%:*}"
   context="${entry##*:}"
-  image="${REGISTRY}/noon/${name}:${TAG}"
+  image="${REGISTRY}/topchoice/${name}:${TAG}"
 
   echo ""
   echo "==> building ${name} (${PLATFORM})"
@@ -59,8 +59,8 @@ for entry in "${SERVICES[@]}"; do
   if docker buildx build \
       --platform "$PLATFORM" \
       --tag "$image" \
-      --cache-from "type=registry,ref=${REGISTRY}/noon/${name}:buildcache" \
-      --cache-to "type=registry,ref=${REGISTRY}/noon/${name}:buildcache,mode=max" \
+      --cache-from "type=registry,ref=${REGISTRY}/topchoice/${name}:buildcache" \
+      --cache-to "type=registry,ref=${REGISTRY}/topchoice/${name}:buildcache,mode=max" \
       --provenance=false \
       --push \
       "$context"; then
@@ -84,6 +84,6 @@ echo "  cd infra/k8s/overlays/prod"
 echo "  for s in api-gateway identity-service catalog-service order-service payment-service \\"
 echo "           inventory-service cart-service search-service recommendation-service \\"
 echo "           notification-service web; do"
-echo "    kustomize edit set image noon/\$s=${REGISTRY}/noon/\$s:${TAG}"
+echo "    kustomize edit set image topchoice/\$s=${REGISTRY}/topchoice/\$s:${TAG}"
 echo "  done"
 echo "  kubectl apply -k ."

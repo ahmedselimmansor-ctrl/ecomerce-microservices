@@ -27,14 +27,14 @@ export default function WishlistPage() {
   if (items.length === 0) {
     return (
       <div className="mx-auto max-w-[1440px] px-4 py-16 text-center">
-        <Heart className="mx-auto size-16 text-noon-line" aria-hidden />
+        <Heart className="mx-auto size-16 text-tc-line" aria-hidden />
         <h1 className="mt-4 text-xl font-extrabold">قائمة المفضّلة فارغة</h1>
-        <p className="mt-2 text-sm text-noon-muted">
+        <p className="mt-2 text-sm text-tc-muted">
           اضغط على القلب في أي منتج لحفظه هنا.
         </p>
         <Link
           href="/"
-          className="mt-6 inline-flex rounded-lg bg-noon-yellow px-6 py-2.5 text-sm font-bold"
+          className="mt-6 inline-flex rounded-lg bg-tc-accent px-6 py-2.5 text-sm font-bold"
         >
           تصفّح المنتجات
         </Link>
@@ -46,7 +46,7 @@ export default function WishlistPage() {
     <div className="mx-auto max-w-[1440px] px-4 py-6">
       <header className="mb-4 flex items-center justify-between gap-4">
         <h1 className="text-xl font-extrabold sm:text-2xl">
-          المفضّلة <span className="text-noon-muted tabular">({items.length})</span>
+          المفضّلة <span className="text-tc-muted tabular">({items.length})</span>
         </h1>
         <button
           type="button"
@@ -54,8 +54,8 @@ export default function WishlistPage() {
             clear();
             toast.success('أُفرغت قائمة المفضّلة');
           }}
-          className="flex items-center gap-1.5 rounded-lg border border-noon-line bg-white
-                     px-3 py-2 text-sm font-semibold text-noon-red hover:bg-noon-red/5"
+          className="flex items-center gap-1.5 rounded-lg border border-tc-line bg-white
+                     px-3 py-2 text-sm font-semibold text-tc-berry hover:bg-tc-berry/5"
         >
           <Trash2 className="size-4" aria-hidden />
           إفراغ القائمة

@@ -19,9 +19,9 @@ const STATUS_FILTERS = [
 ];
 
 const STATUS_STYLE: Record<string, string> = {
-  ACTIVE: 'bg-noon-green/10 text-noon-green',
-  INACTIVE: 'bg-noon-yellow/40 text-noon-ink',
-  ARCHIVED: 'bg-noon-red/10 text-noon-red',
+  ACTIVE: 'bg-tc-leaf/10 text-tc-leaf',
+  INACTIVE: 'bg-tc-accent/40 text-tc-ink',
+  ARCHIVED: 'bg-tc-berry/10 text-tc-berry',
 };
 
 export default function AdminProductsPage() {
@@ -91,23 +91,23 @@ export default function AdminProductsPage() {
       <header className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="text-xl font-extrabold sm:text-2xl">المنتجات</h1>
-          <p className="text-sm text-noon-muted tabular">{totalItems} منتج</p>
+          <p className="text-sm text-tc-muted tabular">{totalItems} منتج</p>
         </div>
         <Link
           href="/admin/products/new"
-          className="flex items-center gap-2 rounded-lg bg-noon-yellow px-4 py-2.5
-                     text-sm font-extrabold text-noon-ink transition hover:brightness-95"
+          className="flex items-center gap-2 rounded-lg bg-tc-accent px-4 py-2.5
+                     text-sm font-extrabold text-tc-ink transition hover:brightness-95"
         >
           <Plus className="size-4" aria-hidden />
           منتج جديد
         </Link>
       </header>
 
-      <div className="flex flex-wrap items-center gap-3 rounded-lg border border-noon-line
+      <div className="flex flex-wrap items-center gap-3 rounded-lg border border-tc-line
                       bg-white p-3">
         <div className="relative min-w-[220px] flex-1">
           <Search className="pointer-events-none absolute inset-y-0 start-3 my-auto size-4
-                             text-noon-muted" aria-hidden />
+                             text-tc-muted" aria-hidden />
           <input
             type="search"
             value={search}
@@ -116,7 +116,7 @@ export default function AdminProductsPage() {
               setPage(0);
             }}
             placeholder="ابحث بالـ SKU أو الاسم أو العلامة…"
-            className="w-full rounded-lg border border-noon-line py-2 ps-9 pe-3 text-sm"
+            className="w-full rounded-lg border border-tc-line py-2 ps-9 pe-3 text-sm"
           />
         </div>
 
@@ -131,8 +131,8 @@ export default function AdminProductsPage() {
               }}
               className={`rounded-full px-3 py-1.5 text-sm font-semibold transition
                 ${status === filter.key
-                  ? 'bg-noon-ink text-white'
-                  : 'bg-noon-bg text-noon-ink hover:bg-noon-line'}`}
+                  ? 'bg-tc-ink text-white'
+                  : 'bg-tc-bg text-tc-ink hover:bg-tc-line'}`}
             >
               {filter.label}
             </button>
@@ -140,10 +140,10 @@ export default function AdminProductsPage() {
         </div>
       </div>
 
-      <div className="overflow-x-auto rounded-lg border border-noon-line bg-white">
+      <div className="overflow-x-auto rounded-lg border border-tc-line bg-white">
         <table className="w-full min-w-[760px] text-sm">
-          <thead className="border-b border-noon-line bg-noon-bg text-start">
-            <tr className="text-[13px] text-noon-muted">
+          <thead className="border-b border-tc-line bg-tc-bg text-start">
+            <tr className="text-[13px] text-tc-muted">
               <th className="p-3 text-start font-semibold">المنتج</th>
               <th className="p-3 text-start font-semibold">SKU</th>
               <th className="p-3 text-start font-semibold">السعر</th>
@@ -153,28 +153,28 @@ export default function AdminProductsPage() {
             </tr>
           </thead>
 
-          <tbody className="divide-y divide-noon-line">
+          <tbody className="divide-y divide-tc-line">
             {loading && products.length === 0 && (
               <tr>
                 <td colSpan={6} className="p-10 text-center">
-                  <Loader2 className="mx-auto size-6 animate-spin text-noon-muted" aria-hidden />
+                  <Loader2 className="mx-auto size-6 animate-spin text-tc-muted" aria-hidden />
                 </td>
               </tr>
             )}
 
             {!loading && products.length === 0 && (
               <tr>
-                <td colSpan={6} className="p-10 text-center text-noon-muted">
+                <td colSpan={6} className="p-10 text-center text-tc-muted">
                   لا توجد منتجات مطابقة
                 </td>
               </tr>
             )}
 
             {products.map((product) => (
-              <tr key={product.sku} className="hover:bg-noon-bg/60">
+              <tr key={product.sku} className="hover:bg-tc-bg/60">
                 <td className="p-3">
                   <div className="flex items-center gap-3">
-                    <span className="relative size-11 shrink-0 overflow-hidden rounded bg-noon-bg">
+                    <span className="relative size-11 shrink-0 overflow-hidden rounded bg-tc-bg">
                       <Image
                         src={product.images[0] || PLACEHOLDER_IMAGE}
                         alt=""
@@ -189,29 +189,29 @@ export default function AdminProductsPage() {
                         {product.title.ar ?? product.title.en ?? product.sku}
                       </span>
                       {product.brandName && (
-                        <span className="block text-xs text-noon-muted">{product.brandName}</span>
+                        <span className="block text-xs text-tc-muted">{product.brandName}</span>
                       )}
                     </span>
                   </div>
                 </td>
-                <td className="p-3 font-mono text-xs text-noon-muted">{product.sku}</td>
+                <td className="p-3 font-mono text-xs text-tc-muted">{product.sku}</td>
                 <td className="p-3">
                   <span className="font-bold tabular">
                     {formatMoney(product.priceMinor, product.currency)}
                   </span>
                   {product.wasMinor && product.wasMinor > product.priceMinor && (
-                    <span className="ms-1.5 text-xs text-noon-muted line-through tabular">
+                    <span className="ms-1.5 text-xs text-tc-muted line-through tabular">
                       {formatMoney(product.wasMinor, product.currency)}
                     </span>
                   )}
                 </td>
-                <td className="p-3 text-xs text-noon-muted">
+                <td className="p-3 text-xs text-tc-muted">
                   {product.categoryPath.join(' › ') || '—'}
                 </td>
                 <td className="p-3">
                   <span
                     className={`rounded px-2 py-1 text-xs font-semibold
-                      ${STATUS_STYLE[product.status] ?? 'bg-noon-bg text-noon-muted'}`}
+                      ${STATUS_STYLE[product.status] ?? 'bg-tc-bg text-tc-muted'}`}
                   >
                     {product.status}
                   </span>
@@ -221,8 +221,8 @@ export default function AdminProductsPage() {
                     <Link
                       href={`/admin/products/${encodeURIComponent(product.sku)}`}
                       aria-label={`تعديل ${product.sku}`}
-                      className="grid size-8 place-items-center rounded-lg text-noon-blue
-                                 hover:bg-noon-blue/10"
+                      className="grid size-8 place-items-center rounded-lg text-tc-link
+                                 hover:bg-tc-link/10"
                     >
                       <Pencil className="size-4" aria-hidden />
                     </Link>
@@ -232,8 +232,8 @@ export default function AdminProductsPage() {
                       onClick={() => void toggleStatus(product)}
                       disabled={busy === product.sku || product.status === 'ARCHIVED'}
                       aria-label={product.status === 'ACTIVE' ? 'إخفاء' : 'تفعيل'}
-                      className="grid size-8 place-items-center rounded-lg text-noon-ink
-                                 hover:bg-noon-bg disabled:opacity-40"
+                      className="grid size-8 place-items-center rounded-lg text-tc-ink
+                                 hover:bg-tc-bg disabled:opacity-40"
                     >
                       {product.status === 'ACTIVE' ? (
                         <EyeOff className="size-4" aria-hidden />
@@ -247,8 +247,8 @@ export default function AdminProductsPage() {
                       onClick={() => void archive(product)}
                       disabled={busy === product.sku || product.status === 'ARCHIVED'}
                       aria-label={`أرشفة ${product.sku}`}
-                      className="grid size-8 place-items-center rounded-lg text-noon-red
-                                 hover:bg-noon-red/10 disabled:opacity-40"
+                      className="grid size-8 place-items-center rounded-lg text-tc-berry
+                                 hover:bg-tc-berry/10 disabled:opacity-40"
                     >
                       <Archive className="size-4" aria-hidden />
                     </button>
@@ -266,20 +266,20 @@ export default function AdminProductsPage() {
             type="button"
             onClick={() => setPage((p) => Math.max(0, p - 1))}
             disabled={page === 0}
-            className="grid size-9 place-items-center rounded-lg border border-noon-line
+            className="grid size-9 place-items-center rounded-lg border border-tc-line
                        bg-white disabled:opacity-40"
             aria-label="الصفحة السابقة"
           >
             <ChevronLeft className="size-4 rtl:rotate-180" aria-hidden />
           </button>
-          <span className="px-3 text-sm text-noon-muted tabular">
+          <span className="px-3 text-sm text-tc-muted tabular">
             {page + 1} / {totalPages}
           </span>
           <button
             type="button"
             onClick={() => setPage((p) => Math.min(totalPages - 1, p + 1))}
             disabled={page >= totalPages - 1}
-            className="grid size-9 place-items-center rounded-lg border border-noon-line
+            className="grid size-9 place-items-center rounded-lg border border-tc-line
                        bg-white disabled:opacity-40"
             aria-label="الصفحة التالية"
           >

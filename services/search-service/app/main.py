@@ -37,7 +37,7 @@ async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
 
 
 app = FastAPI(
-    title="noon search-service",
+    title="topchoice search-service",
     version="1.0.0",
     default_response_class=ORJSONResponse,
     lifespan=lifespan,

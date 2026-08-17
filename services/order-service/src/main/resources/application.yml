@@ -11,9 +11,9 @@ spring:
   lifecycle:
     timeout-per-shutdown-phase: 30s
   datasource:
-    url: jdbc:postgresql://${POSTGRES_HOST:localhost}:${POSTGRES_PORT:5432}/${POSTGRES_DB_ORDER:noon_order}
-    username: ${POSTGRES_USER:noon}
-    password: ${POSTGRES_PASSWORD:noon_local_pw}
+    url: jdbc:postgresql://${POSTGRES_HOST:localhost}:${POSTGRES_PORT:5432}/${POSTGRES_DB_ORDER:topchoice_order}
+    username: ${POSTGRES_USER:topchoice}
+    password: ${POSTGRES_PASSWORD:topchoice_local_pw}
     hikari:
       maximum-pool-size: ${DB_POOL_MAX:25}
       minimum-idle: 3
@@ -51,7 +51,7 @@ spring:
       ack-mode: manual
       concurrency: 3
 
-noon:
+topchoice:
   topics:
     order-events: order.events.v1
     inventory-events: inventory.events.v1
@@ -107,4 +107,4 @@ management:
 logging:
   level:
     root: INFO
-    com.noon: ${LOG_LEVEL:INFO}
+    com.topchoice: ${LOG_LEVEL:INFO}

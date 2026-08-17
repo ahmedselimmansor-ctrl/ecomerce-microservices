@@ -8,7 +8,7 @@
 # ============================================================================
 set -euo pipefail
 
-CLUSTER="${CLUSTER:-noon-dev}"
+CLUSTER="${CLUSTER:-topchoice-dev}"
 REGION="${AWS_REGION:-me-south-1}"
 TF_DIR="$(dirname "$0")/../infra/terraform"
 

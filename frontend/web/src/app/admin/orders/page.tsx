@@ -51,14 +51,14 @@ export default function AdminOrdersPage() {
     <div className="space-y-4">
       <header>
         <h1 className="text-xl font-extrabold sm:text-2xl">الطلبات</h1>
-        <p className="text-sm text-noon-muted tabular">{totalItems} طلب</p>
+        <p className="text-sm text-tc-muted tabular">{totalItems} طلب</p>
       </header>
 
-      <div className="flex flex-wrap items-center gap-3 rounded-lg border border-noon-line
+      <div className="flex flex-wrap items-center gap-3 rounded-lg border border-tc-line
                       bg-white p-3">
         <div className="relative min-w-[220px] flex-1">
           <Search className="pointer-events-none absolute inset-y-0 start-3 my-auto size-4
-                             text-noon-muted" aria-hidden />
+                             text-tc-muted" aria-hidden />
           <input
             type="search"
             value={search}
@@ -67,7 +67,7 @@ export default function AdminOrdersPage() {
               setPage(0);
             }}
             placeholder="ابحث برقم الطلب…"
-            className="w-full rounded-lg border border-noon-line py-2 ps-9 pe-3 text-sm"
+            className="w-full rounded-lg border border-tc-line py-2 ps-9 pe-3 text-sm"
           />
         </div>
 
@@ -77,7 +77,7 @@ export default function AdminOrdersPage() {
             setStatus(e.target.value);
             setPage(0);
           }}
-          className="rounded-lg border border-noon-line px-3 py-2 text-sm"
+          className="rounded-lg border border-tc-line px-3 py-2 text-sm"
         >
           {STATUSES.map((s) => (
             <option key={s || 'all'} value={s}>
@@ -87,10 +87,10 @@ export default function AdminOrdersPage() {
         </select>
       </div>
 
-      <div className="overflow-x-auto rounded-lg border border-noon-line bg-white">
+      <div className="overflow-x-auto rounded-lg border border-tc-line bg-white">
         <table className="w-full min-w-[720px] text-sm">
-          <thead className="border-b border-noon-line bg-noon-bg">
-            <tr className="text-[13px] text-noon-muted">
+          <thead className="border-b border-tc-line bg-tc-bg">
+            <tr className="text-[13px] text-tc-muted">
               <th className="p-3 text-start font-semibold">رقم الطلب</th>
               <th className="p-3 text-start font-semibold">التاريخ</th>
               <th className="p-3 text-start font-semibold">الأصناف</th>
@@ -101,18 +101,18 @@ export default function AdminOrdersPage() {
             </tr>
           </thead>
 
-          <tbody className="divide-y divide-noon-line">
+          <tbody className="divide-y divide-tc-line">
             {loading && orders.length === 0 && (
               <tr>
                 <td colSpan={7} className="p-10 text-center">
-                  <Loader2 className="mx-auto size-6 animate-spin text-noon-muted" aria-hidden />
+                  <Loader2 className="mx-auto size-6 animate-spin text-tc-muted" aria-hidden />
                 </td>
               </tr>
             )}
 
             {!loading && orders.length === 0 && (
               <tr>
-                <td colSpan={7} className="p-10 text-center text-noon-muted">
+                <td colSpan={7} className="p-10 text-center text-tc-muted">
                   لا توجد طلبات مطابقة
                 </td>
               </tr>
@@ -121,9 +121,9 @@ export default function AdminOrdersPage() {
             {orders.map((order) => {
               const meta = orderStatus(order.status);
               return (
-                <tr key={order.id} className="hover:bg-noon-bg/60">
+                <tr key={order.id} className="hover:bg-tc-bg/60">
                   <td className="p-3 font-bold tabular">{order.orderNumber}</td>
-                  <td className="p-3 text-xs text-noon-muted">
+                  <td className="p-3 text-xs text-tc-muted">
                     {formatDateShort(order.createdAt)}
                   </td>
                   <td className="p-3 tabular">{order.itemCount}</td>
@@ -137,7 +137,7 @@ export default function AdminOrdersPage() {
                       {meta.label}
                     </span>
                     {order.failureReason && (
-                      <span className="mt-1 block text-[10px] text-noon-muted">
+                      <span className="mt-1 block text-[10px] text-tc-muted">
                         {order.failureReason}
                       </span>
                     )}
@@ -146,8 +146,8 @@ export default function AdminOrdersPage() {
                     <Link
                       href={`/admin/orders/${order.id}`}
                       aria-label={`عرض ${order.orderNumber}`}
-                      className="inline-grid size-8 place-items-center rounded-lg text-noon-blue
-                                 hover:bg-noon-blue/10"
+                      className="inline-grid size-8 place-items-center rounded-lg text-tc-link
+                                 hover:bg-tc-link/10"
                     >
                       <Eye className="size-4" aria-hidden />
                     </Link>
@@ -166,12 +166,12 @@ export default function AdminOrdersPage() {
             onClick={() => setPage((p) => Math.max(0, p - 1))}
             disabled={page === 0}
             aria-label="الصفحة السابقة"
-            className="grid size-9 place-items-center rounded-lg border border-noon-line
+            className="grid size-9 place-items-center rounded-lg border border-tc-line
                        bg-white disabled:opacity-40"
           >
             <ChevronLeft className="size-4 rtl:rotate-180" aria-hidden />
           </button>
-          <span className="px-3 text-sm text-noon-muted tabular">
+          <span className="px-3 text-sm text-tc-muted tabular">
             {page + 1} / {totalPages}
           </span>
           <button
@@ -179,7 +179,7 @@ export default function AdminOrdersPage() {
             onClick={() => setPage((p) => Math.min(totalPages - 1, p + 1))}
             disabled={page >= totalPages - 1}
             aria-label="الصفحة التالية"
-            className="grid size-9 place-items-center rounded-lg border border-noon-line
+            className="grid size-9 place-items-center rounded-lg border border-tc-line
                        bg-white disabled:opacity-40"
           >
             <ChevronRight className="size-4 rtl:rotate-180" aria-hidden />

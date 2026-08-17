@@ -39,7 +39,7 @@ export default function CheckoutPage() {
   if (!hydrated || !user) {
     return (
       <div className="mx-auto max-w-3xl px-4 py-16 text-center">
-        <Loader2 className="mx-auto size-8 animate-spin text-noon-muted" aria-hidden />
+        <Loader2 className="mx-auto size-8 animate-spin text-tc-muted" aria-hidden />
       </div>
     );
   }
@@ -49,7 +49,7 @@ export default function CheckoutPage() {
     return (
       <div className="mx-auto max-w-3xl px-4 py-16 text-center">
         <h1 className="text-xl font-extrabold">سلتك فارغة</h1>
-        <Link href="/" className="mt-4 inline-flex rounded-lg bg-noon-yellow px-6 py-2.5 text-sm font-bold">
+        <Link href="/" className="mt-4 inline-flex rounded-lg bg-tc-accent px-6 py-2.5 text-sm font-bold">
           تصفّح المنتجات
         </Link>
       </div>
@@ -132,7 +132,7 @@ export default function CheckoutPage() {
 
       <form onSubmit={handleSubmit} className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_320px]">
         <div className="space-y-4">
-          <fieldset className="card-noon space-y-3 p-4">
+          <fieldset className="card-tc space-y-3 p-4">
             <legend className="text-base font-extrabold">عنوان التوصيل</legend>
 
             <div className="grid gap-3 sm:grid-cols-2">
@@ -152,7 +152,7 @@ export default function CheckoutPage() {
             </div>
           </fieldset>
 
-          <fieldset className="card-noon space-y-2 p-4">
+          <fieldset className="card-tc space-y-2 p-4">
             <legend className="text-base font-extrabold">طريقة الدفع</legend>
 
             {[
@@ -163,8 +163,8 @@ export default function CheckoutPage() {
                 key={option.value}
                 className={`flex cursor-pointer items-center gap-3 rounded-lg border p-3 transition
                   ${method === option.value
-                    ? 'border-noon-ink bg-noon-bg'
-                    : 'border-noon-line hover:border-noon-muted'}`}
+                    ? 'border-tc-ink bg-tc-bg'
+                    : 'border-tc-line hover:border-tc-muted'}`}
               >
                 <input
                   type="radio"
@@ -174,48 +174,48 @@ export default function CheckoutPage() {
                   onChange={() => setMethod(option.value)}
                   className="size-4"
                 />
-                <option.icon className="size-5 text-noon-muted" aria-hidden />
+                <option.icon className="size-5 text-tc-muted" aria-hidden />
                 <span className="text-sm font-medium">{option.label}</span>
               </label>
             ))}
 
-            <p className="pt-1 text-xs text-noon-muted">
+            <p className="pt-1 text-xs text-tc-muted">
               بيئة تجريبية: لا تُدخل بيانات بطاقة حقيقية. الدفع يُحاكى ببوابة وهمية.
             </p>
           </fieldset>
         </div>
 
-        <aside className="card-noon h-fit space-y-3 p-4 lg:sticky lg:top-24">
+        <aside className="card-tc h-fit space-y-3 p-4 lg:sticky lg:top-24">
           <h2 className="text-base font-extrabold">ملخّص الطلب</h2>
 
           <div>
-            <label htmlFor="couponCode" className="mb-1 block text-xs text-noon-muted">
+            <label htmlFor="couponCode" className="mb-1 block text-xs text-tc-muted">
               كود الخصم
             </label>
             <input
               id="couponCode"
               name="couponCode"
-              placeholder="NOON10"
-              className="w-full rounded-lg border border-noon-line px-3 py-2 text-sm uppercase"
+              placeholder="TOPCHOICE10"
+              className="w-full rounded-lg border border-tc-line px-3 py-2 text-sm uppercase"
             />
           </div>
 
-          <dl className="space-y-2 border-t border-noon-line pt-3 text-sm">
+          <dl className="space-y-2 border-t border-tc-line pt-3 text-sm">
             <div className="flex justify-between">
-              <dt className="text-noon-muted">المجموع الفرعي</dt>
+              <dt className="text-tc-muted">المجموع الفرعي</dt>
               <dd className="tabular">{formatMoney(subtotal)}</dd>
             </div>
             <div className="flex justify-between">
-              <dt className="text-noon-muted">الشحن</dt>
+              <dt className="text-tc-muted">الشحن</dt>
               <dd className="tabular">
-                {shipping === 0 ? <span className="text-noon-green">مجاني</span> : formatMoney(shipping)}
+                {shipping === 0 ? <span className="text-tc-leaf">مجاني</span> : formatMoney(shipping)}
               </dd>
             </div>
             <div className="flex justify-between">
-              <dt className="text-noon-muted">ضريبة القيمة المضافة</dt>
+              <dt className="text-tc-muted">ضريبة القيمة المضافة</dt>
               <dd className="tabular">{formatMoney(vat)}</dd>
             </div>
-            <div className="flex justify-between border-t border-noon-line pt-2 text-base font-extrabold">
+            <div className="flex justify-between border-t border-tc-line pt-2 text-base font-extrabold">
               <dt>الإجمالي</dt>
               <dd className="tabular">{formatMoney(total)}</dd>
             </div>
@@ -224,7 +224,7 @@ export default function CheckoutPage() {
           <button
             type="submit"
             disabled={submitting}
-            className="flex w-full items-center justify-center gap-2 rounded-lg bg-noon-yellow
+            className="flex w-full items-center justify-center gap-2 rounded-lg bg-tc-accent
                        py-3 text-sm font-extrabold transition hover:brightness-95
                        disabled:cursor-not-allowed disabled:opacity-60"
           >
@@ -250,9 +250,9 @@ interface FieldProps {
 function Field({ name, label, type = 'text', placeholder, defaultValue, error, required }: FieldProps) {
   return (
     <div>
-      <label htmlFor={name} className="mb-1 block text-xs font-medium text-noon-muted">
+      <label htmlFor={name} className="mb-1 block text-xs font-medium text-tc-muted">
         {label}
-        {required && <span className="text-noon-red"> *</span>}
+        {required && <span className="text-tc-berry"> *</span>}
       </label>
       <input
         id={name}
@@ -263,10 +263,10 @@ function Field({ name, label, type = 'text', placeholder, defaultValue, error, r
         aria-invalid={Boolean(error)}
         aria-describedby={error ? `${name}-error` : undefined}
         className={`w-full rounded-lg border px-3 py-2 text-sm
-          ${error ? 'border-noon-red' : 'border-noon-line'}`}
+          ${error ? 'border-tc-berry' : 'border-tc-line'}`}
       />
       {error && (
-        <p id={`${name}-error`} className="mt-1 text-xs text-noon-red">
+        <p id={`${name}-error`} className="mt-1 text-xs text-tc-berry">
           {error}
         </p>
       )}

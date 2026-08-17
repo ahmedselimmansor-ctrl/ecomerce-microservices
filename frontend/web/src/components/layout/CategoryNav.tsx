@@ -29,7 +29,7 @@ export function CategoryNav() {
 
   return (
     <div
-      className="relative border-b border-noon-line bg-white"
+      className="relative border-b border-tc-line bg-white"
       onMouseLeave={scheduleClose}
     >
       <nav className="mx-auto max-w-[1440px] px-4" aria-label="أقسام المتجر">
@@ -43,8 +43,8 @@ export function CategoryNav() {
                 className={`block whitespace-nowrap border-b-2 py-3 text-[15px] font-semibold
                   transition-colors
                   ${active?.slug === category.slug
-                    ? 'border-noon-ink text-noon-ink'
-                    : 'border-transparent text-noon-ink hover:text-noon-blue'}`}
+                    ? 'border-tc-ink text-tc-ink'
+                    : 'border-transparent text-tc-ink hover:text-tc-link'}`}
               >
                 {category.label}
               </Link>
@@ -55,7 +55,7 @@ export function CategoryNav() {
 
       {active && (
         <div
-          className="absolute inset-x-0 top-full z-40 border-b border-noon-line bg-white shadow-lg"
+          className="absolute inset-x-0 top-full z-40 border-b border-tc-line bg-white shadow-lg"
           onMouseEnter={() => openMenu(active)}
         >
           <div className="mx-auto grid max-w-[1440px] gap-6 px-4 py-6 lg:grid-cols-[minmax(0,1fr)_380px]">
@@ -68,7 +68,7 @@ export function CategoryNav() {
               >
                 {active.columns.map((column) => (
                   <div key={column.title}>
-                    <h3 className="mb-3 text-[13px] font-extrabold uppercase tracking-wide text-noon-ink">
+                    <h3 className="mb-3 text-[13px] font-extrabold uppercase tracking-wide text-tc-ink">
                       {column.title}
                     </h3>
                     <ul className="space-y-2">
@@ -77,7 +77,7 @@ export function CategoryNav() {
                           <Link
                             href={`/category/${link.slug}`}
                             onClick={() => setActive(null)}
-                            className="block truncate text-[13px] text-noon-ink/80 hover:text-noon-blue"
+                            className="block truncate text-[13px] text-tc-ink/80 hover:text-tc-link"
                           >
                             {link.label}
                           </Link>
@@ -90,7 +90,7 @@ export function CategoryNav() {
 
               {active.brands.length > 0 && (
                 <div className="mt-8">
-                  <h3 className="mb-3 text-[13px] font-extrabold uppercase tracking-wide text-noon-ink">
+                  <h3 className="mb-3 text-[13px] font-extrabold uppercase tracking-wide text-tc-ink">
                     Top Brands
                   </h3>
                   <ul className="flex flex-wrap gap-2">
@@ -100,8 +100,8 @@ export function CategoryNav() {
                           href={`/search?q=${encodeURIComponent(brand)}`}
                           onClick={() => setActive(null)}
                           className="grid h-11 min-w-[88px] place-items-center rounded-md
-                                     border border-noon-line bg-noon-bg px-3 text-[11px]
-                                     font-bold text-noon-ink transition hover:border-noon-ink"
+                                     border border-tc-line bg-tc-bg px-3 text-[11px]
+                                     font-bold text-tc-ink transition hover:border-tc-ink"
                         >
                           {brand}
                         </Link>
@@ -115,7 +115,7 @@ export function CategoryNav() {
             <Link
               href={active.promo.href}
               onClick={() => setActive(null)}
-              className="relative hidden aspect-[4/3] overflow-hidden rounded-lg bg-noon-bg lg:block"
+              className="relative hidden aspect-[4/3] overflow-hidden rounded-lg bg-tc-bg lg:block"
             >
               <Image
                 src={active.promo.image}

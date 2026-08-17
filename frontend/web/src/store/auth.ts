@@ -106,7 +106,7 @@ export const useAuth = create<AuthState>()(
       },
     }),
     {
-      name: 'noon-auth',
+      name: 'topchoice-auth',
       partialize: (state) => ({
         user: state.user,
         accessToken: state.accessToken,

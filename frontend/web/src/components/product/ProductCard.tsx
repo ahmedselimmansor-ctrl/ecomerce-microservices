@@ -14,14 +14,14 @@ import type { ProductSummary } from '@/lib/schemas';
 interface Props {
   product: ProductSummary;
   priority?: boolean;
-  /** إعلان ممول — noon تضع "Ad" أسفل الصورة. */
+  /** إعلان ممول — نضع وسم "Ad" أسفل الصورة حتى لا يُخفى الترويج عن المشتري. */
   sponsored?: boolean;
 }
 
 /**
  * بطاقة المنتج.
  *
- * <p>مطابقة لبطاقة noon: شارة أعلى اليسار، قلب أعلى اليمين، زر إضافة سريعة
+ * <p>البطاقة: شارة أعلى اليسار، قلب أعلى اليمين، زر إضافة سريعة
  * فوق الصورة، تقييم أخضر، سعر ثم سعر مشطوب ثم نسبة الخصم، سطر إشارة
  * (توصيل مجاني / كمية محدودة / ترتيب في الفئة)، وشارة express مائلة.
  */
@@ -34,9 +34,9 @@ export function ProductCard({ product, priority = false, sponsored = false }: Pr
   const href = `/product/${product.slug ?? product.sku}`;
   const discount = product.discountPercent ?? null;
   const badge = product.tags.includes('bestseller')
-    ? { label: 'Best Seller', className: 'bg-noon-green-dark' }
+    ? { label: 'Best Seller', className: 'bg-tc-leaf-deep' }
     : product.tags.includes('official')
-      ? { label: 'Official Store', className: 'bg-noon-green-dark' }
+      ? { label: 'Official Store', className: 'bg-tc-leaf-deep' }
       : null;
 
   async function handleAdd(event: React.MouseEvent) {
@@ -63,8 +63,8 @@ export function ProductCard({ product, priority = false, sponsored = false }: Pr
   return (
     <Link
       href={href}
-      className="group relative flex flex-col overflow-hidden rounded-lg border border-noon-line
-                 bg-white transition hover:shadow-[var(--shadow-noon-hover)]"
+      className="group relative flex flex-col overflow-hidden rounded-lg border border-tc-line
+                 bg-white transition hover:shadow-[var(--shadow-tc-hover)]"
     >
       {/* -------------------------------------------------------------- image */}
       <div className="relative aspect-square bg-white">
@@ -83,10 +83,10 @@ export function ProductCard({ product, priority = false, sponsored = false }: Pr
           aria-label={isWishlisted ? 'إزالة من المفضّلة' : 'إضافة إلى المفضّلة'}
           aria-pressed={isWishlisted}
           className="absolute end-2 top-2 z-10 grid size-8 place-items-center rounded-full
-                     bg-white/90 text-noon-ink transition hover:bg-white"
+                     bg-white/90 text-tc-ink transition hover:bg-white"
         >
           <Heart
-            className={`size-[18px] ${isWishlisted ? 'fill-noon-red text-noon-red' : ''}`}
+            className={`size-[18px] ${isWishlisted ? 'fill-tc-berry text-tc-berry' : ''}`}
             aria-hidden
           />
         </button>
@@ -107,8 +107,8 @@ export function ProductCard({ product, priority = false, sponsored = false }: Pr
           disabled={adding}
           aria-label={`أضف ${product.title} إلى السلة`}
           className="absolute bottom-2 end-2 z-10 grid size-8 place-items-center rounded-md
-                     border border-noon-line bg-white text-noon-ink transition
-                     hover:border-noon-ink active:scale-95 disabled:opacity-60
+                     border border-tc-line bg-white text-tc-ink transition
+                     hover:border-tc-ink active:scale-95 disabled:opacity-60
                      motion-reduce:active:scale-100"
         >
           {adding ? (
@@ -121,9 +121,9 @@ export function ProductCard({ product, priority = false, sponsored = false }: Pr
 
       {/* --------------------------------------------------------------- body */}
       <div className="flex flex-1 flex-col gap-1 px-3 pb-2 pt-1">
-        {sponsored && <span className="text-[10px] text-noon-muted">Ad</span>}
+        {sponsored && <span className="text-[10px] text-tc-muted">Ad</span>}
 
-        <h3 className="line-clamp-2-fixed text-[13px] leading-tight text-noon-ink">
+        <h3 className="line-clamp-2-fixed text-[13px] leading-tight text-tc-ink">
           {product.title}
         </h3>
 
@@ -131,29 +131,29 @@ export function ProductCard({ product, priority = false, sponsored = false }: Pr
           <div className="flex items-center gap-1 text-[11px]">
             <span
               className={`flex items-center gap-0.5 rounded px-1 py-px font-bold text-white tabular
-                ${product.rating >= 4 ? 'bg-noon-green' : 'bg-noon-orange'}`}
+                ${product.rating >= 4 ? 'bg-tc-leaf' : 'bg-tc-amber'}`}
             >
               {product.rating.toFixed(1)}
               <Star className="size-2.5 fill-current" aria-hidden />
             </span>
             {product.ratingCount ? (
-              <span className="text-noon-muted tabular">({formatCount(product.ratingCount)})</span>
+              <span className="text-tc-muted tabular">({formatCount(product.ratingCount)})</span>
             ) : null}
           </div>
         )}
 
         <div className="flex flex-wrap items-baseline gap-1.5">
-          <span className="text-[11px] font-medium text-noon-ink">{product.currency}</span>
-          <span className="text-[17px] font-bold leading-none text-noon-ink tabular">
+          <span className="text-[11px] font-medium text-tc-ink">{product.currency}</span>
+          <span className="text-[17px] font-bold leading-none text-tc-ink tabular">
             {formatMoney(product.priceMinor, product.currency, undefined, false)}
           </span>
           {product.wasMinor && product.wasMinor > product.priceMinor && (
             <>
-              <span className="text-[11px] text-noon-muted line-through tabular">
+              <span className="text-[11px] text-tc-muted line-through tabular">
                 {formatMoney(product.wasMinor, product.currency, undefined, false)}
               </span>
               {discount ? (
-                <span className="text-[11px] font-semibold text-noon-green tabular">
+                <span className="text-[11px] font-semibold text-tc-leaf tabular">
                   {discount}%
                 </span>
               ) : null}
@@ -168,18 +168,18 @@ export function ProductCard({ product, priority = false, sponsored = false }: Pr
       <div className="flex items-center gap-0 px-3 pb-3">
         {product.tags.includes('market') ? (
           <span className="flex items-center gap-1 rounded bg-[#eaf3ea] px-2 py-0.5
-                           text-[10px] font-semibold text-noon-green-dark">
+                           text-[10px] font-semibold text-tc-leaf-deep">
             <Store className="size-3" aria-hidden />
             market
           </span>
         ) : (
           <>
-            <span className="badge-skew bg-noon-yellow px-2 py-0.5 text-[11px] font-extrabold
-                             italic text-noon-ink">
+            <span className="badge-skew bg-tc-accent px-2 py-0.5 text-[11px] font-extrabold
+                             italic text-tc-ink">
               <span>express</span>
             </span>
             {product.tags.includes('express') && (
-              <span className="badge-skew bg-noon-ink px-2 py-0.5 text-[11px] font-bold
+              <span className="badge-skew bg-tc-ink px-2 py-0.5 text-[11px] font-bold
                                italic text-white">
                 <span>Tomorrow</span>
               </span>
@@ -194,13 +194,14 @@ export function ProductCard({ product, priority = false, sponsored = false }: Pr
 /**
  * السطر الإشاري تحت السعر.
  *
- * <p>noon تعرض إشارة واحدة فقط بترتيب أولوية: الندرة تسبق الشعبية تسبق
+ * <p>إشارة واحدة فقط بترتيب أولوية — إشارتان تتنافسان فتُلغيان أثر بعضهما.
+ * الندرة تسبق الشعبية تسبق
  * التوصيل. عرض كل الإشارات معًا يُضعف أثرها.
  */
 function SignalLine({ product }: { product: ProductSummary }) {
   if (product.tags.includes('low-stock')) {
     return (
-      <p className="flex items-center gap-1 text-[11px] text-noon-red">
+      <p className="flex items-center gap-1 text-[11px] text-tc-berry">
         <Flame className="size-3 shrink-0" aria-hidden />
         Selling out fast
       </p>
@@ -208,7 +209,7 @@ function SignalLine({ product }: { product: ProductSummary }) {
   }
   if (product.tags.includes('lowest-price')) {
     return (
-      <p className="flex items-center gap-1 text-[11px] text-noon-red">
+      <p className="flex items-center gap-1 text-[11px] text-tc-berry">
         <Clock className="size-3 shrink-0" aria-hidden />
         Lowest price in 30 days
       </p>
@@ -216,22 +217,22 @@ function SignalLine({ product }: { product: ProductSummary }) {
   }
   if (product.tags.includes('bestseller')) {
     return (
-      <p className="flex items-center gap-1 text-[11px] text-noon-muted">
-        <Trophy className="size-3 shrink-0 text-noon-purple" aria-hidden />
+      <p className="flex items-center gap-1 text-[11px] text-tc-muted">
+        <Trophy className="size-3 shrink-0 text-tc-plum" aria-hidden />
         Top rated in category
       </p>
     );
   }
   if (product.tags.includes('trending')) {
     return (
-      <p className="flex items-center gap-1 text-[11px] text-noon-muted">
-        <ShoppingBag className="size-3 shrink-0 text-noon-green" aria-hidden />
+      <p className="flex items-center gap-1 text-[11px] text-tc-muted">
+        <ShoppingBag className="size-3 shrink-0 text-tc-leaf" aria-hidden />
         500+ sold recently
       </p>
     );
   }
   return (
-    <p className="flex items-center gap-1 text-[11px] text-noon-muted">
+    <p className="flex items-center gap-1 text-[11px] text-tc-muted">
       <Truck className="size-3 shrink-0" aria-hidden />
       Free Delivery
     </p>
@@ -240,7 +241,7 @@ function SignalLine({ product }: { product: ProductSummary }) {
 
 export function ProductCardSkeleton() {
   return (
-    <div className="overflow-hidden rounded-lg border border-noon-line bg-white">
+    <div className="overflow-hidden rounded-lg border border-tc-line bg-white">
       <div className="skeleton aspect-square" />
       <div className="space-y-2 p-3">
         <div className="skeleton h-3 w-full rounded" />

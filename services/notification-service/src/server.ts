@@ -33,11 +33,11 @@ const sender: Sender = process.env.SMTP_HOST
   ? new LocalSender(
       process.env.SMTP_HOST,
       Number(process.env.SMTP_PORT ?? 1025),
-      process.env.MAIL_FROM ?? 'noreply@noon.local',
+      process.env.MAIL_FROM ?? 'noreply@topchoice.local',
     )
   : new AwsSender(
       process.env.AWS_REGION ?? 'me-south-1',
-      process.env.MAIL_FROM ?? 'noreply@noon.example',
+      process.env.MAIL_FROM ?? 'noreply@topchoice.example',
       process.env.AWS_ENDPOINT_URL,
     );
 

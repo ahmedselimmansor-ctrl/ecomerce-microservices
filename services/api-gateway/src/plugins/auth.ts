@@ -26,7 +26,7 @@ async function plugin(app: FastifyInstance): Promise<void> {
     const token = extractToken(req);
     if (!token) return;
     try {
-      const { payload } = await jwtVerify(token, secret, { issuer: 'noon-identity' });
+      const { payload } = await jwtVerify(token, secret, { issuer: 'topchoice-identity' });
       req.user = {
         id: String(payload.sub),
         email: payload.email as string | undefined,
@@ -47,7 +47,7 @@ async function plugin(app: FastifyInstance): Promise<void> {
       });
     }
     try {
-      const { payload } = await jwtVerify(token, secret, { issuer: 'noon-identity' });
+      const { payload } = await jwtVerify(token, secret, { issuer: 'topchoice-identity' });
       req.user = {
         id: String(payload.sub),
         email: payload.email as string | undefined,
@@ -79,7 +79,7 @@ async function plugin(app: FastifyInstance): Promise<void> {
  * بدونه تبقى الـ decorators داخل سياق الإضافة وحدها، فتظهر
  * {@code app.requireAuth} كـ undefined عند تسجيل المسارات في الجذر.
  */
-export const authPlugin = fp(plugin, { name: 'noon-auth' });
+export const authPlugin = fp(plugin, { name: 'topchoice-auth' });
 
 function extractToken(req: FastifyRequest): string | null {
   const header = req.headers.authorization;

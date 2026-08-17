@@ -9,9 +9,9 @@ spring:
     virtual:
       enabled: true
   datasource:
-    url: jdbc:postgresql://${POSTGRES_HOST:localhost}:${POSTGRES_PORT:5432}/${POSTGRES_DB_INVENTORY:noon_inventory}
-    username: ${POSTGRES_USER:noon}
-    password: ${POSTGRES_PASSWORD:noon_local_pw}
+    url: jdbc:postgresql://${POSTGRES_HOST:localhost}:${POSTGRES_PORT:5432}/${POSTGRES_DB_INVENTORY:topchoice_inventory}
+    username: ${POSTGRES_USER:topchoice}
+    password: ${POSTGRES_PASSWORD:topchoice_local_pw}
     hikari:
       maximum-pool-size: ${DB_POOL_MAX:20}
       minimum-idle: 2
@@ -47,7 +47,7 @@ spring:
       ack-mode: manual
       concurrency: 3
 
-noon:
+topchoice:
   topics:
     order-events: order.events.v1
     inventory-events: inventory.events.v1
@@ -71,4 +71,4 @@ management:
 logging:
   level:
     root: INFO
-    com.noon: ${LOG_LEVEL:INFO}
+    com.topchoice: ${LOG_LEVEL:INFO}

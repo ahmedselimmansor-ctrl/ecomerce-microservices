@@ -11,7 +11,7 @@ apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
   name: default-deny-ingress
-  namespace: noon
+  namespace: topchoice
 spec:
   podSelector: {}
   policyTypes: [Ingress]
@@ -21,7 +21,7 @@ apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
   name: allow-dns
-  namespace: noon
+  namespace: topchoice
 spec:
   podSelector: {}
   policyTypes: [Egress]
@@ -41,7 +41,7 @@ apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
   name: allow-ingress-to-edge
-  namespace: noon
+  namespace: topchoice
 spec:
   podSelector:
     matchExpressions:
@@ -66,7 +66,7 @@ apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
   name: allow-gateway-to-services
-  namespace: noon
+  namespace: topchoice
 spec:
   podSelector:
     matchExpressions:
@@ -109,7 +109,7 @@ apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
   name: allow-egress-to-data
-  namespace: noon
+  namespace: topchoice
 spec:
   podSelector: {}
   policyTypes: [Egress]

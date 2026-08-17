@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import { Info, Mail, Phone } from 'lucide-react';
 import { FOOTER_COLUMNS, POPULAR_SEARCHES } from '@/lib/navigation';
+import { Logo } from './Logo';
 
 /**
  * أيقونات الشبكات مرسومة هنا لا مستوردة من lucide.
@@ -39,8 +40,8 @@ export function Footer() {
               <li key={term}>
                 <Link
                   href={`/search?q=${encodeURIComponent(term)}`}
-                  className="block rounded-full border border-noon-line bg-white px-3 py-1.5
-                             text-[13px] text-noon-ink transition hover:border-noon-ink"
+                  className="block rounded-full border border-tc-line bg-white px-3 py-1.5
+                             text-[13px] text-tc-ink transition hover:border-tc-ink"
                 >
                   {term}
                 </Link>
@@ -49,7 +50,7 @@ export function Footer() {
           </ul>
           <button
             type="button"
-            className="mt-3 text-sm font-semibold text-noon-blue hover:underline"
+            className="mt-3 text-sm font-semibold text-tc-link hover:underline"
           >
             View More
           </button>
@@ -57,19 +58,19 @@ export function Footer() {
       </section>
 
       {/* -------------------------------------------------------------- help */}
-      <section className="border-y border-noon-line bg-noon-bg px-4 py-6">
+      <section className="border-y border-tc-line bg-tc-bg px-4 py-6">
         <div className="mx-auto flex max-w-[1440px] flex-wrap items-center justify-between gap-6">
           <div>
-            <h2 className="text-xl font-extrabold text-noon-ink">We&apos;re Always Here To Help</h2>
-            <p className="mt-1 text-sm text-noon-muted">
+            <h2 className="text-xl font-extrabold text-tc-ink">We&apos;re Always Here To Help</h2>
+            <p className="mt-1 text-sm text-tc-muted">
               Reach out to us through any of these support channels
             </p>
           </div>
 
           <div className="flex flex-wrap items-center gap-8">
-            <SupportChannel icon={Info} label="HELP CENTER" value="help.noon.com" />
-            <SupportChannel icon={Mail} label="EMAIL SUPPORT" value="egypt@noon.com" />
-            <SupportChannel icon={Phone} label="PHONE SUPPORT" value="16358" />
+            <SupportChannel icon={Info} label="HELP CENTER" value="help.topchoice.com" />
+            <SupportChannel icon={Mail} label="EMAIL SUPPORT" value="support@topchoice.com" />
+            <SupportChannel icon={Phone} label="SUPPORT HOURS" value="9am – 11pm, daily" />
           </div>
         </div>
       </section>
@@ -79,13 +80,13 @@ export function Footer() {
         <div className="mx-auto grid max-w-[1440px] gap-8 sm:grid-cols-2 md:grid-cols-4 lg:grid-cols-7">
           {FOOTER_COLUMNS.map((column) => (
             <nav key={column.title} aria-label={column.title}>
-              <h3 className="mb-3 text-sm font-extrabold text-noon-ink">{column.title}</h3>
+              <h3 className="mb-3 text-sm font-extrabold text-tc-ink">{column.title}</h3>
               <ul className="space-y-2">
                 {column.links.map((link) => (
                   <li key={`${column.title}-${link}`}>
                     <Link
                       href={`/category/${column.slug}`}
-                      className="text-[13px] text-noon-ink/75 transition hover:text-noon-blue"
+                      className="text-[13px] text-tc-ink/75 transition hover:text-tc-link"
                     >
                       {link}
                     </Link>
@@ -98,9 +99,9 @@ export function Footer() {
 
         {/* ------------------------------------------------------- app + social */}
         <div className="mx-auto mt-10 flex max-w-[1440px] flex-wrap items-start justify-center
-                        gap-12 border-t border-noon-line pt-8">
+                        gap-12 border-t border-tc-line pt-8">
           <div className="text-center">
-            <h3 className="mb-3 text-xs font-extrabold tracking-wide text-noon-ink">
+            <h3 className="mb-3 text-xs font-extrabold tracking-wide text-tc-ink">
               SHOP ON THE GO
             </h3>
             <div className="flex gap-2">
@@ -111,7 +112,7 @@ export function Footer() {
           </div>
 
           <div className="text-center">
-            <h3 className="mb-3 text-xs font-extrabold tracking-wide text-noon-ink">
+            <h3 className="mb-3 text-xs font-extrabold tracking-wide text-tc-ink">
               CONNECT WITH US
             </h3>
             <ul className="flex gap-3">
@@ -120,8 +121,8 @@ export function Footer() {
                   <a
                     href="#"
                     aria-label={social.label}
-                    className="grid size-10 place-items-center rounded-full bg-noon-yellow
-                               text-noon-ink transition hover:brightness-95"
+                    className="grid size-10 place-items-center rounded-full bg-tc-accent
+                               text-tc-ink transition hover:brightness-95"
                   >
                     <svg viewBox="0 0 24 24" className="size-5 fill-current" aria-hidden>
                       <path d={social.path} />
@@ -134,40 +135,43 @@ export function Footer() {
         </div>
       </section>
 
-      {/* -------------------------------------------------------- bottom bar */}
-      <section className="border-t border-noon-line bg-noon-bg px-4 py-5">
-        <div className="mx-auto flex max-w-[1440px] flex-wrap items-center justify-between gap-4">
-          <p className="text-[13px] text-noon-muted">
-            © {new Date().getFullYear()} noon. All Rights Reserved
-          </p>
+      {/*
+        الشريط الأخير بترولي غامق كالهيدر — نفس القاعدة لا زخرفة إضافية:
+        البترولي يملك الكروم. الصفحة تبدأ وتنتهي به فتُحصر منطقة المنتجات
+        البيضاء بينهما، وتبقى الصور أنصع ما فيها.
+      */}
+      <section className="bg-tc-brand-deep px-4 py-6">
+        <div className="mx-auto flex max-w-[1440px] flex-wrap items-center justify-between gap-5">
+          <div className="flex flex-wrap items-center gap-4">
+            <Logo tone="onDark" />
+            <p className="text-[13px] text-white/55">
+              © {new Date().getFullYear()} TopChoice. All Rights Reserved
+            </p>
+          </div>
 
           <ul className="flex flex-wrap items-center gap-2">
             {PAYMENT_METHODS.map((method) => (
               <li
                 key={method}
-                className="rounded border border-noon-line bg-white px-2.5 py-1.5
-                           text-[10px] font-bold text-noon-ink"
+                className="rounded border border-white/20 bg-white/10 px-2.5 py-1.5
+                           text-[10px] font-bold text-white/85"
               >
                 {method}
               </li>
             ))}
           </ul>
 
-          <ul className="flex flex-wrap items-center gap-4 text-[13px] text-noon-ink/75">
+          <ul className="flex flex-wrap items-center gap-4 text-[13px] text-white/70">
             {['Careers', 'Warranty Policy', 'Sell with us', 'Terms of Use',
               'Terms of Sale', 'Privacy Policy'].map((item) => (
               <li key={item}>
-                <a href="#" className="transition hover:text-noon-blue">
+                <a href="#" className="transition hover:text-tc-accent">
                   {item}
                 </a>
               </li>
             ))}
           </ul>
         </div>
-
-        <p className="mx-auto mt-4 max-w-[1440px] text-center text-[11px] text-noon-muted">
-          مشروع تعليمي مفتوح المصدر — لا علاقة له بشركة Noon، والاسم مستخدم للتوضيح فقط.
-        </p>
       </section>
     </footer>
   );
@@ -184,12 +188,12 @@ function SupportChannel({
 }) {
   return (
     <div className="flex items-center gap-3">
-      <span className="grid size-9 place-items-center rounded-full border border-noon-line bg-white">
-        <Icon className="size-4 text-noon-ink" aria-hidden />
+      <span className="grid size-9 place-items-center rounded-full border border-tc-line bg-white">
+        <Icon className="size-4 text-tc-ink" aria-hidden />
       </span>
       <span>
-        <span className="block text-[11px] font-semibold text-noon-muted">{label}</span>
-        <span className="block text-[15px] font-bold text-noon-ink">{value}</span>
+        <span className="block text-[11px] font-semibold text-tc-muted">{label}</span>
+        <span className="block text-[15px] font-bold text-tc-ink">{value}</span>
       </span>
     </div>
   );
@@ -197,7 +201,7 @@ function SupportChannel({
 
 function StoreBadge({ top, bottom }: { top: string; bottom: string }) {
   return (
-    <span className="flex flex-col rounded-md bg-noon-ink px-3 py-1.5 text-white">
+    <span className="flex flex-col rounded-md bg-tc-ink px-3 py-1.5 text-white">
       <span className="text-[8px] leading-tight">{top}</span>
       <span className="text-[13px] font-bold leading-tight">{bottom}</span>
     </span>

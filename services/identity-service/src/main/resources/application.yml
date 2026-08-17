@@ -13,9 +13,9 @@ spring:
     virtual:
       enabled: true          # Java 21 virtual threads — عدد اتصالات متزامنة أعلى بكثير
   datasource:
-    url: jdbc:postgresql://${POSTGRES_HOST:localhost}:${POSTGRES_PORT:5432}/${POSTGRES_DB_IDENTITY:noon_identity}
-    username: ${POSTGRES_USER:noon}
-    password: ${POSTGRES_PASSWORD:noon_local_pw}
+    url: jdbc:postgresql://${POSTGRES_HOST:localhost}:${POSTGRES_PORT:5432}/${POSTGRES_DB_IDENTITY:topchoice_identity}
+    username: ${POSTGRES_USER:topchoice}
+    password: ${POSTGRES_PASSWORD:topchoice_local_pw}
     hikari:
       maximum-pool-size: ${DB_POOL_MAX:15}
       minimum-idle: 2
@@ -32,10 +32,10 @@ spring:
     enabled: true
     baseline-on-migrate: true
 
-noon:
+topchoice:
   jwt:
     secret: ${JWT_SECRET:local-dev-only-change-me-9f2b7c1d4e6a8b0c2d4e6f8a0b2c4d6e}
-    issuer: noon-identity
+    issuer: topchoice-identity
     access-ttl-seconds: ${JWT_ACCESS_TTL_SECONDS:900}
     refresh-ttl-seconds: ${JWT_REFRESH_TTL_SECONDS:2592000}
 
@@ -61,6 +61,6 @@ management:
 logging:
   level:
     root: INFO
-    com.noon: ${LOG_LEVEL:INFO}
+    com.topchoice: ${LOG_LEVEL:INFO}
   pattern:
     console: '%d{yyyy-MM-dd HH:mm:ss.SSS} %-5level [%X{traceId:-}] %logger{36} - %msg%n'

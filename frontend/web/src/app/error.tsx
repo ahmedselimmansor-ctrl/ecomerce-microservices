@@ -17,16 +17,16 @@ export default function GlobalError({
   return (
     <div className="mx-auto max-w-lg px-4 py-24 text-center">
       <h1 className="text-xl font-extrabold">حدث خطأ غير متوقع</h1>
-      <p className="mt-2 text-sm text-noon-muted">
+      <p className="mt-2 text-sm text-tc-muted">
         نعتذر عن ذلك. يمكنك المحاولة مرة أخرى.
       </p>
       {error.digest && (
-        <p className="mt-2 text-xs text-noon-muted tabular">رمز الخطأ: {error.digest}</p>
+        <p className="mt-2 text-xs text-tc-muted tabular">رمز الخطأ: {error.digest}</p>
       )}
       <button
         type="button"
         onClick={reset}
-        className="mt-6 rounded-lg bg-noon-yellow px-6 py-2.5 text-sm font-bold"
+        className="mt-6 rounded-lg bg-tc-accent px-6 py-2.5 text-sm font-bold"
       >
         إعادة المحاولة
       </button>

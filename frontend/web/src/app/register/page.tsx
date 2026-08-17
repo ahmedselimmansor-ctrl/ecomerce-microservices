@@ -70,14 +70,14 @@ export default function RegisterPage() {
 
   return (
     <div className="mx-auto max-w-md px-4 py-10">
-      <div className="card-noon p-6">
+      <div className="card-tc p-6">
         <h1 className="text-xl font-extrabold">إنشاء حساب</h1>
-        <p className="mt-1 text-sm text-noon-muted">دقيقة واحدة وتبدأ التسوّق</p>
+        <p className="mt-1 text-sm text-tc-muted">دقيقة واحدة وتبدأ التسوّق</p>
 
         <form onSubmit={handleSubmit} className="mt-6 space-y-4">
           {fields.map((field) => (
             <div key={field.name}>
-              <label htmlFor={field.name} className="mb-1 block text-xs font-medium text-noon-muted">
+              <label htmlFor={field.name} className="mb-1 block text-xs font-medium text-tc-muted">
                 {field.label}
               </label>
               <input
@@ -88,10 +88,10 @@ export default function RegisterPage() {
                 aria-invalid={Boolean(errors[field.name])}
                 aria-describedby={errors[field.name] ? `${field.name}-error` : undefined}
                 className={`w-full rounded-lg border px-3 py-2.5 text-sm
-                  ${errors[field.name] ? 'border-noon-red' : 'border-noon-line'}`}
+                  ${errors[field.name] ? 'border-tc-berry' : 'border-tc-line'}`}
               />
               {errors[field.name] && (
-                <p id={`${field.name}-error`} className="mt-1 text-xs text-noon-red">
+                <p id={`${field.name}-error`} className="mt-1 text-xs text-tc-berry">
                   {errors[field.name]}
                 </p>
               )}
@@ -101,7 +101,7 @@ export default function RegisterPage() {
           <button
             type="submit"
             disabled={submitting}
-            className="flex w-full items-center justify-center gap-2 rounded-lg bg-noon-yellow
+            className="flex w-full items-center justify-center gap-2 rounded-lg bg-tc-accent
                        py-2.5 text-sm font-extrabold transition hover:brightness-95
                        disabled:opacity-60"
           >
@@ -110,9 +110,9 @@ export default function RegisterPage() {
           </button>
         </form>
 
-        <p className="mt-5 text-center text-sm text-noon-muted">
+        <p className="mt-5 text-center text-sm text-tc-muted">
           لديك حساب بالفعل؟{' '}
-          <Link href="/login" className="font-bold text-noon-blue hover:underline">
+          <Link href="/login" className="font-bold text-tc-link hover:underline">
             تسجيل الدخول
           </Link>
         </p>

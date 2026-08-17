@@ -42,6 +42,6 @@ export const useWishlist = create<WishlistState>()(
 
       count: () => get().items.length,
     }),
-    { name: 'noon-wishlist' },
+    { name: 'topchoice-wishlist' },
   ),
 );

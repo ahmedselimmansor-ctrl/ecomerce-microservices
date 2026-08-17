@@ -22,12 +22,10 @@ SOFTWARE.
 
 ---
 
-DISCLAIMER
+NOTE ON THIRD-PARTY MARKS
 
-This is an independent, educational project. It is not affiliated with,
-endorsed by, or connected to Noon (noon.com) or Noon AD Holdings Ltd in any
-way. The name "Noon" is used only to describe the reference design this
-project studies. All trademarks, brand names, and product names referenced
-belong to their respective owners. No proprietary assets of noon.com are
-redistributed in this repository; all product images are placeholders or are
+Brand, product, and manufacturer names appearing in seed data, category
+listings, or sample content are the trademarks of their respective owners and
+are used for identification purposes only. No third-party proprietary assets
+are redistributed in this repository; product images are placeholders or are
 loaded from public URLs at runtime.

@@ -9,9 +9,9 @@ RUN --mount=type=cache,target=/root/.m2,sharing=locked \
 
 FROM eclipse-temurin:21-jre-alpine
 WORKDIR /app
-RUN addgroup -S noon && adduser -S noon -G noon && apk add --no-cache curl
-COPY --from=build --chown=noon:noon /build/app.jar app.jar
-USER noon
+RUN addgroup -S topchoice && adduser -S topchoice -G topchoice && apk add --no-cache curl
+COPY --from=build --chown=topchoice:topchoice /build/app.jar app.jar
+USER topchoice
 EXPOSE 8085
 ENV JAVA_OPTS="-XX:MaxRAMPercentage=75 -XX:+UseZGC -XX:+ZGenerational"
 HEALTHCHECK --interval=15s --timeout=3s --start-period=45s --retries=5 \

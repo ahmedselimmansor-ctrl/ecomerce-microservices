@@ -1,5 +1,5 @@
 # ============================================================================
-#  Noon Clone — full local stack
+#  TopChoice Clone — full local stack
 #  make up
 #
 #  كل حاوية هنا لها مقابل مُدار على AWS (انظر docs/02-aws-services.md):
@@ -9,11 +9,11 @@
 #    mailpit   → Amazon SES
 # ============================================================================
 
-name: noon
+name: topchoice
 
 x-common: &common
   restart: unless-stopped
-  networks: [noon]
+  networks: [topchoice]
   logging:
     driver: json-file
     options: { max-size: "10m", max-file: "3" }
@@ -21,8 +21,8 @@ x-common: &common
 x-java-env: &java-env
   POSTGRES_HOST: postgres
   POSTGRES_PORT: "5432"
-  POSTGRES_USER: ${POSTGRES_USER:-noon}
-  POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-noon_local_pw}
+  POSTGRES_USER: ${POSTGRES_USER:-topchoice}
+  POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-topchoice_local_pw}
   KAFKA_BOOTSTRAP_SERVERS: kafka:9092
   JWT_SECRET: ${JWT_SECRET:?JWT_SECRET is required}
   LOG_LEVEL: ${LOG_LEVEL:-INFO}
@@ -36,15 +36,15 @@ services:
     <<: *common
     image: postgres:16-alpine
     environment:
-      POSTGRES_USER: ${POSTGRES_USER:-noon}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-noon_local_pw}
+      POSTGRES_USER: ${POSTGRES_USER:-topchoice}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-topchoice_local_pw}
       POSTGRES_DB: postgres
     ports: ["5432:5432"]
     volumes:
       - pgdata:/var/lib/postgresql/data
       - ./init/postgres-init.sh:/docker-entrypoint-initdb.d/10-create-databases.sh:ro
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-noon}"]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-topchoice}"]
       interval: 5s
       timeout: 3s
       retries: 20
@@ -53,8 +53,8 @@ services:
     <<: *common
     image: mongo:7
     environment:
-      MONGO_INITDB_ROOT_USERNAME: ${MONGO_INITDB_ROOT_USERNAME:-noon}
-      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_INITDB_ROOT_PASSWORD:-noon_local_pw}
+      MONGO_INITDB_ROOT_USERNAME: ${MONGO_INITDB_ROOT_USERNAME:-topchoice}
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_INITDB_ROOT_PASSWORD:-topchoice_local_pw}
     ports: ["27017:27017"]
     volumes:
       - mongodata:/data/db
@@ -100,7 +100,7 @@ services:
       KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
       KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
       KAFKA_NUM_PARTITIONS: "3"
-      CLUSTER_ID: noon-local-cluster-0001
+      CLUSTER_ID: topchoice-local-cluster-0001
     ports: ["29092:29092"]
     volumes:
       - kafkadata:/var/lib/kafka/data
@@ -168,7 +168,7 @@ services:
     depends_on:
       kafka: { condition: service_healthy }
     environment:
-      KAFKA_CLUSTERS_0_NAME: noon-local
+      KAFKA_CLUSTERS_0_NAME: topchoice-local
       KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: kafka:9092
       DYNAMIC_CONFIG_ENABLED: "true"
     ports: ["8090:8080"]
@@ -188,12 +188,12 @@ services:
   identity-service:
     <<: *common
     build: ../services/identity-service
-    image: noon/identity-service:dev
+    image: topchoice/identity-service:dev
     depends_on:
       postgres: { condition: service_healthy }
     environment:
       <<: *java-env
-      POSTGRES_DB_IDENTITY: ${POSTGRES_DB_IDENTITY:-noon_identity}
+      POSTGRES_DB_IDENTITY: ${POSTGRES_DB_IDENTITY:-topchoice_identity}
       JWT_ACCESS_TTL_SECONDS: ${JWT_ACCESS_TTL_SECONDS:-900}
       JWT_REFRESH_TTL_SECONDS: ${JWT_REFRESH_TTL_SECONDS:-2592000}
     ports: ["8081:8081"]
@@ -201,13 +201,13 @@ services:
   catalog-service:
     <<: *common
     build: ../services/catalog-service
-    image: noon/catalog-service:dev
+    image: topchoice/catalog-service:dev
     depends_on:
       mongo: { condition: service_healthy }
       redis: { condition: service_healthy }
       kafka: { condition: service_healthy }
     environment:
-      MONGO_URI: mongodb://${MONGO_INITDB_ROOT_USERNAME:-noon}:${MONGO_INITDB_ROOT_PASSWORD:-noon_local_pw}@mongo:27017/noon_catalog?authSource=admin
+      MONGO_URI: mongodb://${MONGO_INITDB_ROOT_USERNAME:-topchoice}:${MONGO_INITDB_ROOT_PASSWORD:-topchoice_local_pw}@mongo:27017/topchoice_catalog?authSource=admin
       REDIS_HOST: redis
       REDIS_PORT: "6379"
       KAFKA_BOOTSTRAP_SERVERS: kafka:9092
@@ -217,39 +217,39 @@ services:
   inventory-service:
     <<: *common
     build: ../services/inventory-service
-    image: noon/inventory-service:dev
+    image: topchoice/inventory-service:dev
     depends_on:
       postgres: { condition: service_healthy }
       kafka: { condition: service_healthy }
     environment:
       <<: *java-env
-      POSTGRES_DB_INVENTORY: ${POSTGRES_DB_INVENTORY:-noon_inventory}
+      POSTGRES_DB_INVENTORY: ${POSTGRES_DB_INVENTORY:-topchoice_inventory}
     ports: ["8085:8085"]
 
   order-service:
     <<: *common
     build: ../services/order-service
-    image: noon/order-service:dev
+    image: topchoice/order-service:dev
     depends_on:
       postgres: { condition: service_healthy }
       kafka: { condition: service_healthy }
       catalog-service: { condition: service_started }
     environment:
       <<: *java-env
-      POSTGRES_DB_ORDER: ${POSTGRES_DB_ORDER:-noon_order}
+      POSTGRES_DB_ORDER: ${POSTGRES_DB_ORDER:-topchoice_order}
       SERVICE_URL_CATALOG: http://catalog-service:8082
     ports: ["8083:8083"]
 
   payment-service:
     <<: *common
     build: ../services/payment-service
-    image: noon/payment-service:dev
+    image: topchoice/payment-service:dev
     depends_on:
       postgres: { condition: service_healthy }
       kafka: { condition: service_healthy }
     environment:
       <<: *java-env
-      POSTGRES_DB_PAYMENT: ${POSTGRES_DB_PAYMENT:-noon_payment}
+      POSTGRES_DB_PAYMENT: ${POSTGRES_DB_PAYMENT:-topchoice_payment}
       PAYMENT_PROVIDER: mock
       # 10% فشل مُصطنع — لاختبار مسار التعويض في الـ Saga فعليًا
       PAYMENT_MOCK_FAILURE_RATE: ${PAYMENT_MOCK_FAILURE_RATE:-0.1}
@@ -258,7 +258,7 @@ services:
   cart-service:
     <<: *common
     build: ../services/cart-service
-    image: noon/cart-service:dev
+    image: topchoice/cart-service:dev
     depends_on:
       redis: { condition: service_healthy }
     environment:
@@ -270,7 +270,7 @@ services:
   search-service:
     <<: *common
     build: ../services/search-service
-    image: noon/search-service:dev
+    image: topchoice/search-service:dev
     depends_on:
       opensearch: { condition: service_healthy }
       kafka: { condition: service_healthy }
@@ -284,7 +284,7 @@ services:
   recommendation-service:
     <<: *common
     build: ../services/recommendation-service
-    image: noon/recommendation-service:dev
+    image: topchoice/recommendation-service:dev
     depends_on:
       redis: { condition: service_healthy }
     environment:
@@ -300,7 +300,7 @@ services:
   notification-service:
     <<: *common
     build: ../services/notification-service
-    image: noon/notification-service:dev
+    image: topchoice/notification-service:dev
     depends_on:
       kafka: { condition: service_healthy }
       mailpit: { condition: service_started }
@@ -311,7 +311,7 @@ services:
       SERVICE_URL_IDENTITY: http://identity-service:8081
       SMTP_HOST: mailpit
       SMTP_PORT: "1025"
-      MAIL_FROM: noreply@noon.local
+      MAIL_FROM: noreply@topchoice.local
       PORT: "8089"
       LOG_LEVEL: ${LOG_LEVEL:-info}
     ports: ["8089:8089"]
@@ -319,7 +319,7 @@ services:
   api-gateway:
     <<: *common
     build: ../services/api-gateway
-    image: noon/api-gateway:dev
+    image: topchoice/api-gateway:dev
     depends_on:
       redis: { condition: service_healthy }
       identity-service: { condition: service_started }
@@ -348,7 +348,7 @@ services:
       context: ../frontend/web
       args:
         NEXT_PUBLIC_API_URL: http://localhost:8080
-    image: noon/web:dev
+    image: topchoice/web:dev
     depends_on:
       api-gateway: { condition: service_started }
     environment:
@@ -361,7 +361,7 @@ services:
     ports: ["3000:3000"]
 
 networks:
-  noon:
+  topchoice:
     driver: bridge
 
 volumes:

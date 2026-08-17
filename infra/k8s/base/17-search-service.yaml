@@ -3,10 +3,10 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: search-service
-  namespace: noon
+  namespace: topchoice
   labels:
     app.kubernetes.io/name: search-service
-    app.kubernetes.io/part-of: noon
+    app.kubernetes.io/part-of: topchoice
 spec:
   replicas: 2
   revisionHistoryLimit: 3
@@ -23,7 +23,7 @@ spec:
     metadata:
       labels:
         app.kubernetes.io/name: search-service
-        app.kubernetes.io/part-of: noon
+        app.kubernetes.io/part-of: topchoice
       annotations:
         prometheus.io/scrape: "true"
         prometheus.io/port: "8087"
@@ -54,22 +54,22 @@ spec:
               app.kubernetes.io/name: search-service
       containers:
         - name: search-service
-          image: noon/search-service:dev
+          image: topchoice/search-service:dev
           imagePullPolicy: IfNotPresent
           ports:
             - name: http
               containerPort: 8087
           env:
             - name: LOG_LEVEL
-              valueFrom: { configMapKeyRef: { name: noon-config, key: LOG_LEVEL } }
+              valueFrom: { configMapKeyRef: { name: topchoice-config, key: LOG_LEVEL } }
             - name: AWS_REGION
-              valueFrom: { configMapKeyRef: { name: noon-config, key: AWS_REGION } }
+              valueFrom: { configMapKeyRef: { name: topchoice-config, key: AWS_REGION } }
             - name: KAFKA_BOOTSTRAP_SERVERS
-              valueFrom: { configMapKeyRef: { name: noon-config, key: KAFKA_BOOTSTRAP_SERVERS } }
+              valueFrom: { configMapKeyRef: { name: topchoice-config, key: KAFKA_BOOTSTRAP_SERVERS } }
             - name: OPENSEARCH_URL
-              valueFrom: { configMapKeyRef: { name: noon-config, key: OPENSEARCH_URL } }
+              valueFrom: { configMapKeyRef: { name: topchoice-config, key: OPENSEARCH_URL } }
             - name: OPENSEARCH_INDEX
-              valueFrom: { configMapKeyRef: { name: noon-config, key: OPENSEARCH_INDEX } }
+              valueFrom: { configMapKeyRef: { name: topchoice-config, key: OPENSEARCH_INDEX } }
           resources:
             requests:
               cpu: 200m
@@ -124,7 +124,7 @@ apiVersion: v1
 kind: Service
 metadata:
   name: search-service
-  namespace: noon
+  namespace: topchoice
   labels:
     app.kubernetes.io/name: search-service
   annotations:
@@ -144,7 +144,7 @@ apiVersion: policy/v1
 kind: PodDisruptionBudget
 metadata:
   name: search-service
-  namespace: noon
+  namespace: topchoice
 spec:
   # يضمن بقاء أغلبية النسخ أثناء صيانة العُقد أو سحب Spot
   minAvailable: 1
@@ -156,7 +156,7 @@ apiVersion: autoscaling/v2
 kind: HorizontalPodAutoscaler
 metadata:
   name: search-service
-  namespace: noon
+  namespace: topchoice
 spec:
   scaleTargetRef:
     apiVersion: apps/v1

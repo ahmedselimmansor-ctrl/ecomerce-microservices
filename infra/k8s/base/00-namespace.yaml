@@ -1,9 +1,9 @@
 apiVersion: v1
 kind: Namespace
 metadata:
-  name: noon
+  name: topchoice
   labels:
-    name: noon
+    name: topchoice
     # يفرض معايير أمان الـ pod على مستوى الـ namespace:
     # لا امتيازات، لا root، لا host namespaces
     pod-security.kubernetes.io/enforce: restricted
@@ -14,8 +14,8 @@ metadata:
 apiVersion: v1
 kind: ResourceQuota
 metadata:
-  name: noon-quota
-  namespace: noon
+  name: topchoice-quota
+  namespace: topchoice
 spec:
   hard:
     requests.cpu: "40"
@@ -29,8 +29,8 @@ spec:
 apiVersion: v1
 kind: LimitRange
 metadata:
-  name: noon-defaults
-  namespace: noon
+  name: topchoice-defaults
+  namespace: topchoice
 spec:
   limits:
     - type: Container

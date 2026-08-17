@@ -96,7 +96,7 @@ tf-destroy: ## هدم البنية التحتية
 
 .PHONY: kubeconfig
 kubeconfig: ## ربط kubectl بعنقود EKS
-	aws eks update-kubeconfig --name $(or $(CLUSTER),noon-dev) --region $(or $(REGION),me-south-1)
+	aws eks update-kubeconfig --name $(or $(CLUSTER),topchoice-dev) --region $(or $(REGION),me-south-1)
 
 .PHONY: deploy-eks
 deploy-eks: ## نشر على EKS

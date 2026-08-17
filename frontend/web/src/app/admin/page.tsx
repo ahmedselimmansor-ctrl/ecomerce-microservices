@@ -30,8 +30,8 @@ export default function AdminDashboardPage() {
 
   if (error) {
     return (
-      <div className="rounded-lg border border-noon-line bg-white p-8 text-center">
-        <AlertTriangle className="mx-auto size-10 text-noon-red" aria-hidden />
+      <div className="rounded-lg border border-tc-line bg-white p-8 text-center">
+        <AlertTriangle className="mx-auto size-10 text-tc-berry" aria-hidden />
         <p className="mt-3 font-bold">{error}</p>
       </div>
     );
@@ -40,7 +40,7 @@ export default function AdminDashboardPage() {
   if (!data) {
     return (
       <div className="grid h-64 place-items-center">
-        <Loader2 className="size-8 animate-spin text-noon-muted" aria-hidden />
+        <Loader2 className="size-8 animate-spin text-tc-muted" aria-hidden />
       </div>
     );
   }
@@ -53,7 +53,7 @@ export default function AdminDashboardPage() {
 
       {/* الخدمات مستقلة: سقوط إحداها يُفرّغ بطاقاتها فقط لا اللوحة كلها */}
       {(!catalog || !orders || !inventory) && (
-        <p className="flex items-center gap-2 rounded-lg bg-noon-yellow/40 px-4 py-3 text-sm">
+        <p className="flex items-center gap-2 rounded-lg bg-tc-accent/40 px-4 py-3 text-sm">
           <AlertTriangle className="size-4 shrink-0" aria-hidden />
           بعض الخدمات لم تستجب — الأرقام المعروضة جزئية.
         </p>
@@ -92,20 +92,20 @@ export default function AdminDashboardPage() {
       </section>
 
       {orders && (
-        <section className="rounded-lg border border-noon-line bg-white p-4">
+        <section className="rounded-lg border border-tc-line bg-white p-4">
           <h2 className="mb-3 text-base font-extrabold">الطلبات حسب الحالة</h2>
           <div className="grid gap-3 sm:grid-cols-3 lg:grid-cols-6">
-            <StatusTile icon={Clock} label="قيد المعالجة" value={orders.pending} tone="text-noon-orange" href="/admin/orders?status=PENDING" />
-            <StatusTile icon={CheckCircle2} label="مؤكَّد" value={orders.confirmed} tone="text-noon-green" href="/admin/orders?status=CONFIRMED" />
-            <StatusTile icon={Package} label="قيد التجهيز" value={orders.processing} tone="text-noon-blue" href="/admin/orders?status=PROCESSING" />
-            <StatusTile icon={Truck} label="تم الشحن" value={orders.shipped} tone="text-noon-blue" href="/admin/orders?status=SHIPPED" />
-            <StatusTile icon={CheckCircle2} label="تم التسليم" value={orders.delivered} tone="text-noon-green" href="/admin/orders?status=DELIVERED" />
-            <StatusTile icon={XCircle} label="ملغي" value={orders.cancelled} tone="text-noon-red" href="/admin/orders?status=CANCELLED" />
+            <StatusTile icon={Clock} label="قيد المعالجة" value={orders.pending} tone="text-tc-amber" href="/admin/orders?status=PENDING" />
+            <StatusTile icon={CheckCircle2} label="مؤكَّد" value={orders.confirmed} tone="text-tc-leaf" href="/admin/orders?status=CONFIRMED" />
+            <StatusTile icon={Package} label="قيد التجهيز" value={orders.processing} tone="text-tc-link" href="/admin/orders?status=PROCESSING" />
+            <StatusTile icon={Truck} label="تم الشحن" value={orders.shipped} tone="text-tc-link" href="/admin/orders?status=SHIPPED" />
+            <StatusTile icon={CheckCircle2} label="تم التسليم" value={orders.delivered} tone="text-tc-leaf" href="/admin/orders?status=DELIVERED" />
+            <StatusTile icon={XCircle} label="ملغي" value={orders.cancelled} tone="text-tc-berry" href="/admin/orders?status=CANCELLED" />
           </div>
 
-          <p className="mt-4 border-t border-noon-line pt-3 text-sm text-noon-muted">
+          <p className="mt-4 border-t border-tc-line pt-3 text-sm text-tc-muted">
             متوسط قيمة الطلب:{' '}
-            <strong className="text-noon-ink tabular">
+            <strong className="text-tc-ink tabular">
               {formatMoney(Math.round(orders.averageOrderMinor))}
             </strong>
           </p>
@@ -113,7 +113,7 @@ export default function AdminDashboardPage() {
       )}
 
       <section className="grid gap-3 md:grid-cols-2">
-        <div className="rounded-lg border border-noon-line bg-white p-4">
+        <div className="rounded-lg border border-tc-line bg-white p-4">
           <h2 className="mb-3 text-base font-extrabold">الكتالوج</h2>
           {catalog ? (
             <dl className="space-y-2 text-sm">
@@ -123,11 +123,11 @@ export default function AdminDashboardPage() {
               <Row label="عدد العلامات" value={formatNumber(catalog.brands)} />
             </dl>
           ) : (
-            <p className="text-sm text-noon-muted">الخدمة غير متاحة</p>
+            <p className="text-sm text-tc-muted">الخدمة غير متاحة</p>
           )}
         </div>
 
-        <div className="rounded-lg border border-noon-line bg-white p-4">
+        <div className="rounded-lg border border-tc-line bg-white p-4">
           <h2 className="mb-3 text-base font-extrabold">المخزون</h2>
           {inventory ? (
             <dl className="space-y-2 text-sm">
@@ -137,7 +137,7 @@ export default function AdminDashboardPage() {
               <Row label="مخزون منخفض" value={formatNumber(inventory.lowStock)} />
             </dl>
           ) : (
-            <p className="text-sm text-noon-muted">الخدمة غير متاحة</p>
+            <p className="text-sm text-tc-muted">الخدمة غير متاحة</p>
           )}
         </div>
       </section>
@@ -162,20 +162,20 @@ function StatCard({
   href?: string;
 }) {
   const toneClass =
-    tone === 'green' ? 'text-noon-green' : tone === 'red' ? 'text-noon-red' : 'text-noon-ink';
+    tone === 'green' ? 'text-tc-leaf' : tone === 'red' ? 'text-tc-berry' : 'text-tc-ink';
 
   const content = (
     <>
       <div className="flex items-center justify-between">
-        <span className="text-[13px] text-noon-muted">{label}</span>
+        <span className="text-[13px] text-tc-muted">{label}</span>
         <Icon className={`size-5 ${toneClass}`} aria-hidden />
       </div>
       <p className={`mt-2 text-2xl font-extrabold tabular ${toneClass}`}>{value}</p>
-      {hint && <p className="mt-1 text-xs text-noon-muted tabular">{hint}</p>}
+      {hint && <p className="mt-1 text-xs text-tc-muted tabular">{hint}</p>}
     </>
   );
 
-  const className = 'rounded-lg border border-noon-line bg-white p-4 transition hover:shadow-md';
+  const className = 'rounded-lg border border-tc-line bg-white p-4 transition hover:shadow-md';
   return href ? (
     <Link href={href} className={className}>{content}</Link>
   ) : (
@@ -195,12 +195,12 @@ function StatusTile({
   return (
     <Link
       href={href}
-      className="flex flex-col items-center gap-1 rounded-lg bg-noon-bg p-3 text-center
-                 transition hover:bg-noon-line/50"
+      className="flex flex-col items-center gap-1 rounded-lg bg-tc-bg p-3 text-center
+                 transition hover:bg-tc-line/50"
     >
       <Icon className={`size-5 ${tone}`} aria-hidden />
       <span className="text-lg font-extrabold tabular">{value}</span>
-      <span className="text-[11px] text-noon-muted">{label}</span>
+      <span className="text-[11px] text-tc-muted">{label}</span>
     </Link>
   );
 }
@@ -208,7 +208,7 @@ function StatusTile({
 function Row({ label, value }: { label: string; value: string }) {
   return (
     <div className="flex justify-between">
-      <dt className="text-noon-muted">{label}</dt>
+      <dt className="text-tc-muted">{label}</dt>
       <dd className="font-semibold tabular">{value}</dd>
     </div>
   );
@@ -224,11 +224,11 @@ function QuickAction({
   return (
     <Link
       href={href}
-      className="flex items-center gap-3 rounded-lg border border-noon-line bg-white p-4
-                 text-sm font-semibold transition hover:border-noon-ink"
+      className="flex items-center gap-3 rounded-lg border border-tc-line bg-white p-4
+                 text-sm font-semibold transition hover:border-tc-ink"
     >
-      <span className="grid size-9 place-items-center rounded-lg bg-noon-yellow">
-        <Icon className="size-[18px] text-noon-ink" aria-hidden />
+      <span className="grid size-9 place-items-center rounded-lg bg-tc-accent">
+        <Icon className="size-[18px] text-tc-ink" aria-hidden />
       </span>
       {label}
     </Link>

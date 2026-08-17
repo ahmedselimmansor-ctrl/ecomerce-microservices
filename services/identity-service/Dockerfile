@@ -15,12 +15,12 @@ RUN --mount=type=cache,target=/root/.m2,sharing=locked \
 FROM eclipse-temurin:21-jre-alpine
 WORKDIR /app
 
-RUN addgroup -S noon && adduser -S noon -G noon \
+RUN addgroup -S topchoice && adduser -S topchoice -G topchoice \
  && apk add --no-cache curl
 
-COPY --from=build --chown=noon:noon /build/app.jar app.jar
+COPY --from=build --chown=topchoice:topchoice /build/app.jar app.jar
 
-USER noon
+USER topchoice
 EXPOSE 8081
 
 ENV JAVA_OPTS="-XX:MaxRAMPercentage=75 -XX:+UseZGC -XX:+ZGenerational -Djava.security.egd=file:/dev/./urandom"

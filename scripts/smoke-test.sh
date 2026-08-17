@@ -26,7 +26,7 @@ check() {
 status() { curl -s -o /dev/null -w '%{http_code}' "$@"; }
 
 echo "=============================================="
-echo " noon smoke test — ${GW}"
+echo " topchoice smoke test — ${GW}"
 echo "=============================================="
 
 # ---------------------------------------------------------------- 1. health
@@ -41,8 +41,8 @@ echo "2) catalog & discovery"
 check "home aggregate"   "$(status "${GW}/api/v1/bff/home")" 200
 check "product list"     "$(status "${GW}/api/v1/products?size=5")" 200
 check "categories"       "$(status "${GW}/api/v1/categories")" 200
-check "product detail"   "$(status "${GW}/api/v1/products/N-APL-IP15-128-BLK")" 200
-check "pdp aggregate"    "$(status "${GW}/api/v1/bff/pdp/N-APL-IP15-128-BLK")" 200
+check "product detail"   "$(status "${GW}/api/v1/products/TC-APL-IP15-128-BLK")" 200
+check "pdp aggregate"    "$(status "${GW}/api/v1/bff/pdp/TC-APL-IP15-128-BLK")" 200
 check "unknown product"  "$(status "${GW}/api/v1/products/DOES-NOT-EXIST")" 404
 # الاستعلام مُرمَّز بـ percent-encoding: curl لا يرمّز محارف UTF-8 في الـ URL
 # تلقائيًا فتصل مشوّهة ويردّ الخادم 400. (%D8%A7%D9%8A%D9%81%D9%88%D9%86 = "ايفون")
@@ -54,14 +54,14 @@ check "recommendations"  "$(status "${GW}/api/v1/recommendations/trending?limit=
 # ------------------------------------------------------------ 3. inventory
 echo ""
 echo "3) inventory"
-check "availability"     "$(status "${GW}/api/v1/inventory/N-APL-IP15-128-BLK")" 200
+check "availability"     "$(status "${GW}/api/v1/inventory/TC-APL-IP15-128-BLK")" 200
 
 # ----------------------------------------------------------------- 4. auth
 echo ""
 echo "4) authentication"
 LOGIN=$(curl -s -X POST "${GW}/api/v1/auth/login" \
   -H 'content-type: application/json' \
-  -d '{"email":"demo@noon.local","password":"Passw0rd!"}')
+  -d '{"email":"demo@topchoice.local","password":"Passw0rd!"}')
 
 TOKEN=$(printf '%s' "$LOGIN" | sed -n 's/.*"accessToken":"\([^"]*\)".*/\1/p')
 if [ -n "$TOKEN" ]; then
@@ -77,7 +77,7 @@ fi
 
 check "bad password rejected" \
   "$(status -X POST "${GW}/api/v1/auth/login" -H 'content-type: application/json' \
-     -d '{"email":"demo@noon.local","password":"wrong-password"}')" 401
+     -d '{"email":"demo@topchoice.local","password":"wrong-password"}')" 401
 
 check "profile with token" \
   "$(status "${GW}/api/v1/users/me" -H "authorization: Bearer ${TOKEN}")" 200
@@ -93,12 +93,12 @@ GUEST=$(curl -s -X POST "${GW}/api/v1/cart/guest-token" \
 check "add to cart" \
   "$(status -X POST "${GW}/api/v1/cart/items" \
      -H 'content-type: application/json' -H "x-guest-token: ${GUEST}" \
-     -d '{"sku":"N-APL-IP15-128-BLK","quantity":2}')" 201
+     -d '{"sku":"TC-APL-IP15-128-BLK","quantity":2}')" 201
 
 CART=$(curl -s "${GW}/api/v1/bff/cart" -H "x-guest-token: ${GUEST}")
 SUBTOTAL=$(printf '%s' "$CART" | sed -n 's/.*"subtotalMinor":\([0-9]*\).*/\1/p')
 # سعر الوحدة × 2. المصدر هو الكتالوج لا العميل — نقرأه ونتحقق من الضرب
-UNIT=$(curl -s "${GW}/api/v1/products/N-APL-IP15-128-BLK" \
+UNIT=$(curl -s "${GW}/api/v1/products/TC-APL-IP15-128-BLK" \
   | sed -n 's/.*"priceMinor":\([0-9]*\).*/\1/p')
 check "cart subtotal computed server-side" "${SUBTOTAL}" "$((UNIT * 2))"
 
@@ -112,7 +112,7 @@ ORDER=$(curl -s -X POST "${GW}/api/v1/orders" \
   -H "authorization: Bearer ${TOKEN}" \
   -H "idempotency-key: ${IDEM}" \
   -d '{
-    "items": [{ "sku": "N-APL-IP15-128-BLK", "quantity": 1 }],
+    "items": [{ "sku": "TC-APL-IP15-128-BLK", "quantity": 1 }],
     "shippingAddress": {
       "fullName": "Demo Customer", "phone": "+971500000001",
       "line1": "Sheikh Zayed Road, Tower 1", "city": "Dubai", "country": "AE"
@@ -143,7 +143,7 @@ REPLAY_ID=$(curl -s -X POST "${GW}/api/v1/orders" \
   -H "authorization: Bearer ${TOKEN}" \
   -H "idempotency-key: ${IDEM}" \
   -d '{
-    "items": [{ "sku": "N-APL-IP15-128-BLK", "quantity": 1 }],
+    "items": [{ "sku": "TC-APL-IP15-128-BLK", "quantity": 1 }],
     "shippingAddress": {
       "fullName": "Demo Customer", "phone": "+971500000001",
       "line1": "Sheikh Zayed Road, Tower 1", "city": "Dubai", "country": "AE"

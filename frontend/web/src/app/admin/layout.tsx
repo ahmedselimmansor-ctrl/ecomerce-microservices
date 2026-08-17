@@ -40,7 +40,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   if (!hydrated) {
     return (
       <div className="grid min-h-[60vh] place-items-center">
-        <Loader2 className="size-8 animate-spin text-noon-muted" aria-hidden />
+        <Loader2 className="size-8 animate-spin text-tc-muted" aria-hidden />
       </div>
     );
   }
@@ -50,14 +50,14 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   if (!isAdmin) {
     return (
       <div className="mx-auto max-w-lg px-4 py-20 text-center">
-        <ShieldAlert className="mx-auto size-14 text-noon-red" aria-hidden />
+        <ShieldAlert className="mx-auto size-14 text-tc-berry" aria-hidden />
         <h1 className="mt-4 text-xl font-extrabold">لا تملك صلاحية الوصول</h1>
-        <p className="mt-2 text-sm text-noon-muted">
+        <p className="mt-2 text-sm text-tc-muted">
           هذه الصفحة مخصّصة لحسابات المشرفين فقط.
         </p>
         <Link
           href="/"
-          className="mt-6 inline-flex rounded-lg bg-noon-yellow px-6 py-2.5 text-sm font-bold"
+          className="mt-6 inline-flex rounded-lg bg-tc-accent px-6 py-2.5 text-sm font-bold"
         >
           العودة للمتجر
         </Link>
@@ -69,7 +69,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     <div className="mx-auto flex max-w-[1440px] gap-4 px-4 py-4">
       <aside className="hidden w-56 shrink-0 lg:block">
         <div className="sticky top-28 space-y-1">
-          <div className="mb-3 rounded-lg bg-noon-ink px-4 py-3">
+          <div className="mb-3 rounded-lg bg-tc-ink px-4 py-3">
             <p className="text-[13px] text-white/60">مرحبًا</p>
             <p className="truncate text-sm font-bold text-white">{user.fullName}</p>
           </div>
@@ -87,8 +87,8 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                       className={`flex items-center gap-2.5 rounded-lg px-3 py-2.5 text-sm
                         font-semibold transition
                         ${active
-                          ? 'bg-noon-yellow text-noon-ink'
-                          : 'text-noon-ink hover:bg-white'}`}
+                          ? 'bg-tc-accent text-tc-ink'
+                          : 'text-tc-ink hover:bg-white'}`}
                     >
                       <link.icon className="size-[18px]" aria-hidden />
                       {link.label}
@@ -101,8 +101,8 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
           <Link
             href="/"
-            className="mt-4 flex items-center gap-2 rounded-lg border border-noon-line
-                       bg-white px-3 py-2.5 text-sm font-semibold text-noon-blue"
+            className="mt-4 flex items-center gap-2 rounded-lg border border-tc-line
+                       bg-white px-3 py-2.5 text-sm font-semibold text-tc-link"
           >
             <ArrowRight className="size-4 rtl:rotate-180" aria-hidden />
             العودة للمتجر
@@ -120,7 +120,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                 key={link.href}
                 href={link.href}
                 className={`shrink-0 rounded-full px-4 py-2 text-sm font-semibold
-                  ${active ? 'bg-noon-ink text-white' : 'bg-white text-noon-ink'}`}
+                  ${active ? 'bg-tc-ink text-white' : 'bg-white text-tc-ink'}`}
               >
                 {link.label}
               </Link>

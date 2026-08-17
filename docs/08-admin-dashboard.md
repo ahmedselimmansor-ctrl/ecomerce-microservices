@@ -5,7 +5,7 @@
 | | |
 |---|---|
 | الرابط | http://localhost:3000/admin |
-| الحساب | `admin@noon.local` / `Admin@123` |
+| الحساب | `admin@topchoice.local` / `Admin@123` |
 | الأدوار | `CUSTOMER`, `ADMIN` |
 
 > المشرف يُبذر عبر ترحيل Flyway (`V3__seed_admin.sql`) للتطوير المحلي فقط.

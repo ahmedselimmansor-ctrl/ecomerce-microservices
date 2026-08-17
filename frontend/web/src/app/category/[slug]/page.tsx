@@ -49,17 +49,17 @@ export default async function CategoryPage({ params, searchParams }: PageProps) 
 
   return (
     <div className="mx-auto max-w-7xl space-y-5 px-4 py-6">
-      <nav aria-label="مسار التصفح" className="text-sm text-noon-muted">
-        <Link href="/" className="hover:text-noon-ink">
+      <nav aria-label="مسار التصفح" className="text-sm text-tc-muted">
+        <Link href="/" className="hover:text-tc-ink">
           الرئيسية
         </Link>
         <span className="mx-2">/</span>
-        <span className="text-noon-ink">{slug}</span>
+        <span className="text-tc-ink">{slug}</span>
       </nav>
 
       <header>
         <h1 className="text-xl font-extrabold sm:text-2xl">{slug}</h1>
-        <p className="text-sm text-noon-muted tabular">{result.totalItems} منتج</p>
+        <p className="text-sm text-tc-muted tabular">{result.totalItems} منتج</p>
       </header>
 
       <div className="flex flex-wrap gap-2">
@@ -75,8 +75,8 @@ export default async function CategoryPage({ params, searchParams }: PageProps) 
             href={`/category/${slug}${option.key ? `?sort=${option.key}` : ''}`}
             className={`rounded-full border px-3 py-1.5 text-sm transition
               ${sort === option.key
-                ? 'border-noon-ink bg-noon-ink text-white'
-                : 'border-noon-line bg-white hover:border-noon-muted'}`}
+                ? 'border-tc-ink bg-tc-ink text-white'
+                : 'border-tc-line bg-white hover:border-tc-muted'}`}
           >
             {option.label}
           </Link>
@@ -93,18 +93,18 @@ export default async function CategoryPage({ params, searchParams }: PageProps) 
           {page > 0 && (
             <Link
               href={`/category/${slug}?page=${page - 1}${sort ? `&sort=${sort}` : ''}`}
-              className="rounded-lg border border-noon-line bg-white px-4 py-2 text-sm"
+              className="rounded-lg border border-tc-line bg-white px-4 py-2 text-sm"
             >
               السابق
             </Link>
           )}
-          <span className="px-3 text-sm text-noon-muted tabular">
+          <span className="px-3 text-sm text-tc-muted tabular">
             {page + 1} / {result.totalPages}
           </span>
           {result.hasNext && (
             <Link
               href={`/category/${slug}?page=${page + 1}${sort ? `&sort=${sort}` : ''}`}
-              className="rounded-lg border border-noon-line bg-white px-4 py-2 text-sm"
+              className="rounded-lg border border-tc-line bg-white px-4 py-2 text-sm"
             >
               التالي
             </Link>

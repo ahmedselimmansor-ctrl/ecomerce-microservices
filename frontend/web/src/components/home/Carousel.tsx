@@ -63,8 +63,8 @@ export function Carousel({ children, className = '' }: Props) {
           onClick={() => scrollBy(-1)}
           aria-label="السابق"
           className="absolute start-0 top-1/2 z-10 grid size-9 -translate-y-1/2 place-items-center
-                     rounded-full border border-noon-line bg-white text-noon-ink shadow-md
-                     transition hover:bg-noon-bg"
+                     rounded-full border border-tc-line bg-white text-tc-ink shadow-md
+                     transition hover:bg-tc-bg"
         >
           <ChevronLeft className="size-5 rtl:rotate-180" aria-hidden />
         </button>
@@ -75,8 +75,8 @@ export function Carousel({ children, className = '' }: Props) {
           onClick={() => scrollBy(1)}
           aria-label="التالي"
           className="absolute end-0 top-1/2 z-10 grid size-9 -translate-y-1/2 place-items-center
-                     rounded-full border border-noon-line bg-white text-noon-ink shadow-md
-                     transition hover:bg-noon-bg"
+                     rounded-full border border-tc-line bg-white text-tc-ink shadow-md
+                     transition hover:bg-tc-bg"
         >
           <ChevronRight className="size-5 rtl:rotate-180" aria-hidden />
         </button>

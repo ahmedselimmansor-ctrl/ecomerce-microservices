@@ -70,14 +70,14 @@ export default function AdminInventoryPage() {
     <div className="space-y-4">
       <header>
         <h1 className="text-xl font-extrabold sm:text-2xl">المخزون</h1>
-        <p className="text-sm text-noon-muted tabular">{totalItems} صنف</p>
+        <p className="text-sm text-tc-muted tabular">{totalItems} صنف</p>
       </header>
 
-      <div className="flex flex-wrap items-center gap-3 rounded-lg border border-noon-line
+      <div className="flex flex-wrap items-center gap-3 rounded-lg border border-tc-line
                       bg-white p-3">
         <div className="relative min-w-[220px] flex-1">
           <Search className="pointer-events-none absolute inset-y-0 start-3 my-auto size-4
-                             text-noon-muted" aria-hidden />
+                             text-tc-muted" aria-hidden />
           <input
             type="search"
             value={search}
@@ -86,7 +86,7 @@ export default function AdminInventoryPage() {
               setPage(0);
             }}
             placeholder="ابحث بالـ SKU…"
-            className="w-full rounded-lg border border-noon-line py-2 ps-9 pe-3 text-sm"
+            className="w-full rounded-lg border border-tc-line py-2 ps-9 pe-3 text-sm"
           />
         </div>
 
@@ -104,10 +104,10 @@ export default function AdminInventoryPage() {
         </label>
       </div>
 
-      <div className="overflow-x-auto rounded-lg border border-noon-line bg-white">
+      <div className="overflow-x-auto rounded-lg border border-tc-line bg-white">
         <table className="w-full min-w-[680px] text-sm">
-          <thead className="border-b border-noon-line bg-noon-bg">
-            <tr className="text-[13px] text-noon-muted">
+          <thead className="border-b border-tc-line bg-tc-bg">
+            <tr className="text-[13px] text-tc-muted">
               <th className="p-3 text-start font-semibold">SKU</th>
               <th className="p-3 text-start font-semibold">المستودع</th>
               <th className="p-3 text-start font-semibold">الموجود</th>
@@ -117,18 +117,18 @@ export default function AdminInventoryPage() {
             </tr>
           </thead>
 
-          <tbody className="divide-y divide-noon-line">
+          <tbody className="divide-y divide-tc-line">
             {loading && rows.length === 0 && (
               <tr>
                 <td colSpan={6} className="p-10 text-center">
-                  <Loader2 className="mx-auto size-6 animate-spin text-noon-muted" aria-hidden />
+                  <Loader2 className="mx-auto size-6 animate-spin text-tc-muted" aria-hidden />
                 </td>
               </tr>
             )}
 
             {!loading && rows.length === 0 && (
               <tr>
-                <td colSpan={6} className="p-10 text-center text-noon-muted">
+                <td colSpan={6} className="p-10 text-center text-tc-muted">
                   لا توجد أصناف مطابقة
                 </td>
               </tr>
@@ -141,20 +141,20 @@ export default function AdminInventoryPage() {
               const dirty = draft !== undefined && Number(draft) !== row.onHand;
 
               return (
-                <tr key={row.sku} className="hover:bg-noon-bg/60">
+                <tr key={row.sku} className="hover:bg-tc-bg/60">
                   <td className="p-3 font-mono text-xs">{row.sku}</td>
-                  <td className="p-3 text-xs text-noon-muted">{row.warehouseId}</td>
+                  <td className="p-3 text-xs text-tc-muted">{row.warehouseId}</td>
                   <td className="p-3 tabular">{row.onHand}</td>
-                  <td className="p-3 tabular text-noon-muted">{row.reserved}</td>
+                  <td className="p-3 tabular text-tc-muted">{row.reserved}</td>
                   <td className="p-3">
                     <span
                       className={`inline-flex items-center gap-1 rounded px-2 py-1 text-xs
                         font-bold tabular
                         ${out
-                          ? 'bg-noon-red/10 text-noon-red'
+                          ? 'bg-tc-berry/10 text-tc-berry'
                           : low
-                            ? 'bg-noon-yellow/40 text-noon-ink'
-                            : 'bg-noon-green/10 text-noon-green'}`}
+                            ? 'bg-tc-accent/40 text-tc-ink'
+                            : 'bg-tc-leaf/10 text-tc-leaf'}`}
                     >
                       {(out || low) && <AlertTriangle className="size-3" aria-hidden />}
                       {row.available}
@@ -169,7 +169,7 @@ export default function AdminInventoryPage() {
                         onChange={(e) =>
                           setDrafts((prev) => ({ ...prev, [row.sku]: e.target.value }))
                         }
-                        className="w-24 rounded-lg border border-noon-line px-2 py-1.5
+                        className="w-24 rounded-lg border border-tc-line px-2 py-1.5
                                    text-sm tabular"
                       />
                       <button
@@ -177,8 +177,8 @@ export default function AdminInventoryPage() {
                         onClick={() => void save(row)}
                         disabled={!dirty || busy === row.sku}
                         aria-label={`حفظ كمية ${row.sku}`}
-                        className="grid size-8 place-items-center rounded-lg bg-noon-yellow
-                                   text-noon-ink transition hover:brightness-95
+                        className="grid size-8 place-items-center rounded-lg bg-tc-accent
+                                   text-tc-ink transition hover:brightness-95
                                    disabled:opacity-30"
                       >
                         {busy === row.sku ? (
@@ -196,7 +196,7 @@ export default function AdminInventoryPage() {
         </table>
       </div>
 
-      <p className="rounded-lg bg-noon-bg p-3 text-xs text-noon-muted">
+      <p className="rounded-lg bg-tc-bg p-3 text-xs text-tc-muted">
         «المحجوز» كميات مرتبطة بطلبات جارية. لا يمكن خفض «الموجود» تحتها — الخادم يرفض
         العملية حمايةً لطلبات قيد التنفيذ.
       </p>
@@ -208,12 +208,12 @@ export default function AdminInventoryPage() {
             onClick={() => setPage((p) => Math.max(0, p - 1))}
             disabled={page === 0}
             aria-label="الصفحة السابقة"
-            className="grid size-9 place-items-center rounded-lg border border-noon-line
+            className="grid size-9 place-items-center rounded-lg border border-tc-line
                        bg-white disabled:opacity-40"
           >
             <ChevronLeft className="size-4 rtl:rotate-180" aria-hidden />
           </button>
-          <span className="px-3 text-sm text-noon-muted tabular">
+          <span className="px-3 text-sm text-tc-muted tabular">
             {page + 1} / {totalPages}
           </span>
           <button
@@ -221,7 +221,7 @@ export default function AdminInventoryPage() {
             onClick={() => setPage((p) => Math.min(totalPages - 1, p + 1))}
             disabled={page >= totalPages - 1}
             aria-label="الصفحة التالية"
-            className="grid size-9 place-items-center rounded-lg border border-noon-line
+            className="grid size-9 place-items-center rounded-lg border border-tc-line
                        bg-white disabled:opacity-40"
           >
             <ChevronRight className="size-4 rtl:rotate-180" aria-hidden />

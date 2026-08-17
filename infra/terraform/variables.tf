@@ -17,7 +17,7 @@ variable "environment" {
 
 variable "project" {
   type    = string
-  default = "noon"
+  default = "topchoice"
 }
 
 variable "owner" {

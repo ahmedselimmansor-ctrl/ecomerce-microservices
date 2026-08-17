@@ -1,8 +1,8 @@
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: noon-config
-  namespace: noon
+  name: topchoice-config
+  namespace: topchoice
 data:
   # ---- إعدادات عامة ----
   AWS_REGION: "me-south-1"
@@ -10,15 +10,15 @@ data:
 
   # ---- اكتشاف الخدمات ----
   # DNS داخل العنقود: <service>.<namespace>.svc.cluster.local
-  SERVICE_URL_IDENTITY: "http://identity-service.noon.svc.cluster.local:8081"
-  SERVICE_URL_CATALOG: "http://catalog-service.noon.svc.cluster.local:8082"
-  SERVICE_URL_ORDER: "http://order-service.noon.svc.cluster.local:8083"
-  SERVICE_URL_PAYMENT: "http://payment-service.noon.svc.cluster.local:8084"
-  SERVICE_URL_INVENTORY: "http://inventory-service.noon.svc.cluster.local:8085"
-  SERVICE_URL_CART: "http://cart-service.noon.svc.cluster.local:8086"
-  SERVICE_URL_SEARCH: "http://search-service.noon.svc.cluster.local:8087"
-  SERVICE_URL_RECOMMENDATION: "http://recommendation-service.noon.svc.cluster.local:8088"
-  CATALOG_URL: "http://catalog-service.noon.svc.cluster.local:8082"
+  SERVICE_URL_IDENTITY: "http://identity-service.topchoice.svc.cluster.local:8081"
+  SERVICE_URL_CATALOG: "http://catalog-service.topchoice.svc.cluster.local:8082"
+  SERVICE_URL_ORDER: "http://order-service.topchoice.svc.cluster.local:8083"
+  SERVICE_URL_PAYMENT: "http://payment-service.topchoice.svc.cluster.local:8084"
+  SERVICE_URL_INVENTORY: "http://inventory-service.topchoice.svc.cluster.local:8085"
+  SERVICE_URL_CART: "http://cart-service.topchoice.svc.cluster.local:8086"
+  SERVICE_URL_SEARCH: "http://search-service.topchoice.svc.cluster.local:8087"
+  SERVICE_URL_RECOMMENDATION: "http://recommendation-service.topchoice.svc.cluster.local:8088"
+  CATALOG_URL: "http://catalog-service.topchoice.svc.cluster.local:8082"
 
   # ---- Kafka (MSK) ----
   # القيمة الحقيقية تُحقن من مخرجات Terraform عبر overlay

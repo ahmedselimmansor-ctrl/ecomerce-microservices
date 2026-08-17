@@ -3,10 +3,10 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: recommendation-service
-  namespace: noon
+  namespace: topchoice
   labels:
     app.kubernetes.io/name: recommendation-service
-    app.kubernetes.io/part-of: noon
+    app.kubernetes.io/part-of: topchoice
 spec:
   replicas: 2
   revisionHistoryLimit: 3
@@ -23,7 +23,7 @@ spec:
     metadata:
       labels:
         app.kubernetes.io/name: recommendation-service
-        app.kubernetes.io/part-of: noon
+        app.kubernetes.io/part-of: topchoice
       annotations:
         prometheus.io/scrape: "true"
         prometheus.io/port: "8088"
@@ -54,24 +54,24 @@ spec:
               app.kubernetes.io/name: recommendation-service
       containers:
         - name: recommendation-service
-          image: noon/recommendation-service:dev
+          image: topchoice/recommendation-service:dev
           imagePullPolicy: IfNotPresent
           ports:
             - name: http
               containerPort: 8088
           env:
             - name: LOG_LEVEL
-              valueFrom: { configMapKeyRef: { name: noon-config, key: LOG_LEVEL } }
+              valueFrom: { configMapKeyRef: { name: topchoice-config, key: LOG_LEVEL } }
             - name: AWS_REGION
-              valueFrom: { configMapKeyRef: { name: noon-config, key: AWS_REGION } }
+              valueFrom: { configMapKeyRef: { name: topchoice-config, key: AWS_REGION } }
             - name: REDIS_URL
-              valueFrom: { secretKeyRef: { name: noon-database, key: REDIS_URL } }
+              valueFrom: { secretKeyRef: { name: topchoice-database, key: REDIS_URL } }
             - name: CATALOG_URL
-              valueFrom: { configMapKeyRef: { name: noon-config, key: CATALOG_URL } }
+              valueFrom: { configMapKeyRef: { name: topchoice-config, key: CATALOG_URL } }
             - name: PERSONALIZE_CAMPAIGN_USER
-              valueFrom: { secretKeyRef: { name: noon-app, key: PERSONALIZE_CAMPAIGN_USER } }
+              valueFrom: { secretKeyRef: { name: topchoice-app, key: PERSONALIZE_CAMPAIGN_USER } }
             - name: PERSONALIZE_TRACKING_ID
-              valueFrom: { secretKeyRef: { name: noon-app, key: PERSONALIZE_TRACKING_ID } }
+              valueFrom: { secretKeyRef: { name: topchoice-app, key: PERSONALIZE_TRACKING_ID } }
           resources:
             requests:
               cpu: 150m
@@ -126,7 +126,7 @@ apiVersion: v1
 kind: Service
 metadata:
   name: recommendation-service
-  namespace: noon
+  namespace: topchoice
   labels:
     app.kubernetes.io/name: recommendation-service
   annotations:
@@ -146,7 +146,7 @@ apiVersion: policy/v1
 kind: PodDisruptionBudget
 metadata:
   name: recommendation-service
-  namespace: noon
+  namespace: topchoice
 spec:
   # يضمن بقاء أغلبية النسخ أثناء صيانة العُقد أو سحب Spot
   minAvailable: 1
@@ -158,7 +158,7 @@ apiVersion: autoscaling/v2
 kind: HorizontalPodAutoscaler
 metadata:
   name: recommendation-service
-  namespace: noon
+  namespace: topchoice
 spec:
   scaleTargetRef:
     apiVersion: apps/v1

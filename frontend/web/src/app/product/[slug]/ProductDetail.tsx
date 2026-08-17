@@ -52,7 +52,7 @@ export function ProductDetail({ product, availability }: Props) {
   return (
     <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_380px]">
       {/* ------------------------------------------------------------ gallery */}
-      <div className="card-noon grid gap-4 p-4 sm:grid-cols-[80px_minmax(0,1fr)]">
+      <div className="card-tc grid gap-4 p-4 sm:grid-cols-[80px_minmax(0,1fr)]">
         <div className="order-2 flex gap-2 overflow-x-auto sm:order-1 sm:flex-col sm:overflow-visible">
           {images.map((src, index) => (
             <button
@@ -62,7 +62,7 @@ export function ProductDetail({ product, availability }: Props) {
               aria-label={`صورة ${index + 1}`}
               aria-current={index === activeImage}
               className={`relative size-16 shrink-0 overflow-hidden rounded-lg border-2 transition
-                ${index === activeImage ? 'border-noon-ink' : 'border-noon-line'}`}
+                ${index === activeImage ? 'border-tc-ink' : 'border-tc-line'}`}
             >
               <Image
                 src={src}
@@ -93,39 +93,39 @@ export function ProductDetail({ product, availability }: Props) {
 
       {/* --------------------------------------------------------------- info */}
       <div className="space-y-4">
-        <div className="card-noon space-y-3 p-4">
+        <div className="card-tc space-y-3 p-4">
           {product.brandName && (
-            <span className="text-sm font-semibold text-noon-blue">{product.brandName}</span>
+            <span className="text-sm font-semibold text-tc-link">{product.brandName}</span>
           )}
 
           <h1 className="text-xl font-extrabold leading-snug sm:text-2xl">{product.title}</h1>
 
           {product.rating != null && product.rating > 0 && (
             <div className="flex items-center gap-2 text-sm">
-              <span className="flex items-center gap-1 rounded bg-noon-green/10 px-2 py-0.5
-                               font-bold text-noon-green tabular">
+              <span className="flex items-center gap-1 rounded bg-tc-leaf/10 px-2 py-0.5
+                               font-bold text-tc-leaf tabular">
                 {product.rating.toFixed(1)}
                 <Star className="size-3.5 fill-current" aria-hidden />
               </span>
               {product.ratingCount ? (
-                <span className="text-noon-muted tabular">
+                <span className="text-tc-muted tabular">
                   {formatNumber(product.ratingCount)} تقييم
                 </span>
               ) : null}
             </div>
           )}
 
-          <div className="flex items-end gap-3 border-t border-noon-line pt-3">
+          <div className="flex items-end gap-3 border-t border-tc-line pt-3">
             <span className="text-2xl font-extrabold tabular">
               {formatMoney(product.priceMinor, product.currency)}
             </span>
             {product.wasMinor && product.wasMinor > product.priceMinor && (
               <>
-                <span className="text-sm text-noon-muted line-through tabular">
+                <span className="text-sm text-tc-muted line-through tabular">
                   {formatMoney(product.wasMinor, product.currency)}
                 </span>
                 {product.discountPercent ? (
-                  <span className="rounded bg-noon-red px-2 py-0.5 text-xs font-bold text-white tabular">
+                  <span className="rounded bg-tc-berry px-2 py-0.5 text-xs font-bold text-white tabular">
                     وفّر {product.discountPercent}%
                   </span>
                 ) : null}
@@ -136,18 +136,18 @@ export function ProductDetail({ product, availability }: Props) {
           {/* حالة المخزون: نعرض إشارة لا رقمًا دقيقًا */}
           {availability.inStock ? (
             availability.lowStock ? (
-              <p className="text-sm font-semibold text-noon-red">
+              <p className="text-sm font-semibold text-tc-berry">
                 الكمية محدودة — سارع بالطلب
               </p>
             ) : (
-              <p className="text-sm font-semibold text-noon-green">متوفر</p>
+              <p className="text-sm font-semibold text-tc-leaf">متوفر</p>
             )
           ) : (
-            <p className="text-sm font-semibold text-noon-muted">غير متوفر حاليًا</p>
+            <p className="text-sm font-semibold text-tc-muted">غير متوفر حاليًا</p>
           )}
 
           <div className="flex items-center gap-3 pt-1">
-            <label htmlFor="qty" className="text-sm text-noon-muted">
+            <label htmlFor="qty" className="text-sm text-tc-muted">
               الكمية
             </label>
             <select
@@ -155,7 +155,7 @@ export function ProductDetail({ product, availability }: Props) {
               value={quantity}
               onChange={(e) => setQuantity(Number(e.target.value))}
               disabled={!availability.inStock}
-              className="rounded-lg border border-noon-line bg-white px-3 py-2 text-sm tabular"
+              className="rounded-lg border border-tc-line bg-white px-3 py-2 text-sm tabular"
             >
               {Array.from({ length: maxQuantity }, (_, i) => i + 1).map((n) => (
                 <option key={n} value={n}>
@@ -170,7 +170,7 @@ export function ProductDetail({ product, availability }: Props) {
             onClick={handleAdd}
             disabled={adding || !availability.inStock}
             className="flex w-full items-center justify-center gap-2 rounded-lg
-                       bg-noon-yellow py-3 text-sm font-extrabold text-noon-ink
+                       bg-tc-accent py-3 text-sm font-extrabold text-tc-ink
                        transition hover:brightness-95 active:scale-[0.99]
                        disabled:cursor-not-allowed disabled:opacity-50
                        motion-reduce:active:scale-100"
@@ -184,28 +184,28 @@ export function ProductDetail({ product, availability }: Props) {
           </button>
         </div>
 
-        <ul className="card-noon divide-y divide-noon-line text-sm">
+        <ul className="card-tc divide-y divide-tc-line text-sm">
           <li className="flex items-center gap-3 p-3">
-            <Truck className="size-5 shrink-0 text-noon-blue" aria-hidden />
+            <Truck className="size-5 shrink-0 text-tc-link" aria-hidden />
             <span>توصيل خلال 24 ساعة داخل المدن الرئيسية</span>
           </li>
           <li className="flex items-center gap-3 p-3">
-            <RotateCcw className="size-5 shrink-0 text-noon-blue" aria-hidden />
+            <RotateCcw className="size-5 shrink-0 text-tc-link" aria-hidden />
             <span>إرجاع مجاني خلال 15 يومًا</span>
           </li>
           <li className="flex items-center gap-3 p-3">
-            <ShieldCheck className="size-5 shrink-0 text-noon-blue" aria-hidden />
+            <ShieldCheck className="size-5 shrink-0 text-tc-link" aria-hidden />
             <span>ضمان المنتج الأصلي</span>
           </li>
         </ul>
 
         {Object.keys(product.attributes).length > 0 && (
-          <div className="card-noon p-4">
+          <div className="card-tc p-4">
             <h2 className="mb-3 text-sm font-bold">المواصفات</h2>
-            <dl className="divide-y divide-noon-line text-sm">
+            <dl className="divide-y divide-tc-line text-sm">
               {Object.entries(product.attributes).map(([key, value]) => (
                 <div key={key} className="flex justify-between gap-4 py-2">
-                  <dt className="text-noon-muted">{key}</dt>
+                  <dt className="text-tc-muted">{key}</dt>
                   <dd className="font-medium">{String(value)}</dd>
                 </div>
               ))}
@@ -214,9 +214,9 @@ export function ProductDetail({ product, availability }: Props) {
         )}
 
         {product.description && (
-          <div className="card-noon p-4">
+          <div className="card-tc p-4">
             <h2 className="mb-2 text-sm font-bold">عن المنتج</h2>
-            <p className="text-sm leading-relaxed text-noon-ink/80">{product.description}</p>
+            <p className="text-sm leading-relaxed text-tc-ink/80">{product.description}</p>
           </div>
         )}
       </div>

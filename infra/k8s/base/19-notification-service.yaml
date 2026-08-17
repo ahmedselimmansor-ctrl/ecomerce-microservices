@@ -3,10 +3,10 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: notification-service
-  namespace: noon
+  namespace: topchoice
   labels:
     app.kubernetes.io/name: notification-service
-    app.kubernetes.io/part-of: noon
+    app.kubernetes.io/part-of: topchoice
 spec:
   replicas: 2
   revisionHistoryLimit: 3
@@ -23,7 +23,7 @@ spec:
     metadata:
       labels:
         app.kubernetes.io/name: notification-service
-        app.kubernetes.io/part-of: noon
+        app.kubernetes.io/part-of: topchoice
       annotations:
         prometheus.io/scrape: "true"
         prometheus.io/port: "8089"
@@ -54,20 +54,20 @@ spec:
               app.kubernetes.io/name: notification-service
       containers:
         - name: notification-service
-          image: noon/notification-service:dev
+          image: topchoice/notification-service:dev
           imagePullPolicy: IfNotPresent
           ports:
             - name: http
               containerPort: 8089
           env:
             - name: LOG_LEVEL
-              valueFrom: { configMapKeyRef: { name: noon-config, key: LOG_LEVEL } }
+              valueFrom: { configMapKeyRef: { name: topchoice-config, key: LOG_LEVEL } }
             - name: AWS_REGION
-              valueFrom: { configMapKeyRef: { name: noon-config, key: AWS_REGION } }
+              valueFrom: { configMapKeyRef: { name: topchoice-config, key: AWS_REGION } }
             - name: KAFKA_BOOTSTRAP_SERVERS
-              valueFrom: { configMapKeyRef: { name: noon-config, key: KAFKA_BOOTSTRAP_SERVERS } }
+              valueFrom: { configMapKeyRef: { name: topchoice-config, key: KAFKA_BOOTSTRAP_SERVERS } }
             - name: SERVICE_URL_IDENTITY
-              valueFrom: { configMapKeyRef: { name: noon-config, key: SERVICE_URL_IDENTITY } }
+              valueFrom: { configMapKeyRef: { name: topchoice-config, key: SERVICE_URL_IDENTITY } }
           resources:
             requests:
               cpu: 100m
@@ -122,7 +122,7 @@ apiVersion: v1
 kind: Service
 metadata:
   name: notification-service
-  namespace: noon
+  namespace: topchoice
   labels:
     app.kubernetes.io/name: notification-service
   annotations:
@@ -142,7 +142,7 @@ apiVersion: policy/v1
 kind: PodDisruptionBudget
 metadata:
   name: notification-service
-  namespace: noon
+  namespace: topchoice
 spec:
   # يضمن بقاء أغلبية النسخ أثناء صيانة العُقد أو سحب Spot
   minAvailable: 1
@@ -154,7 +154,7 @@ apiVersion: autoscaling/v2
 kind: HorizontalPodAutoscaler
 metadata:
   name: notification-service
-  namespace: noon
+  namespace: topchoice
 spec:
   scaleTargetRef:
     apiVersion: apps/v1

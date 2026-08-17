@@ -2,7 +2,7 @@
 -- كلمة المرور: Passw0rd!  (BCrypt cost 10)
 INSERT INTO users (id, email, phone, password_hash, full_name, locale, email_verified, status)
 VALUES ('11111111-1111-1111-1111-111111111111',
-        'demo@noon.local',
+        'demo@topchoice.local',
         '+971500000001',
         '$2a$10$4IYf.EQ3NNkB4hdgUrlbfu/SJKs3KJXJZdDWrUzcyoShWU6itSH9y',
         'Demo Customer', 'ar', TRUE, 'ACTIVE')

@@ -58,8 +58,8 @@ export function FilterSidebar({ brands = [], tags = [], categories = [] }: Props
       {hasFilters && (
         <Link
           href={pathname}
-          className="block rounded-lg border border-noon-line bg-white px-4 py-2.5
-                     text-center text-sm font-bold text-noon-blue"
+          className="block rounded-lg border border-tc-line bg-white px-4 py-2.5
+                     text-center text-sm font-bold text-tc-link"
         >
           مسح كل الفلاتر
         </Link>
@@ -117,18 +117,18 @@ export function FilterSidebar({ brands = [], tags = [], categories = [] }: Props
               key={rating}
               href={buildHref('min_rating', active ? null : String(rating))}
               className={`flex items-center gap-2 rounded px-2 py-1.5 text-sm transition
-                ${active ? 'bg-noon-bg font-semibold' : 'hover:bg-noon-bg'}`}
+                ${active ? 'bg-tc-bg font-semibold' : 'hover:bg-tc-bg'}`}
             >
               <span className="flex">
                 {Array.from({ length: 5 }, (_, i) => (
                   <Star
                     key={i}
-                    className={`size-3.5 ${i < rating ? 'fill-noon-orange text-noon-orange' : 'text-noon-line'}`}
+                    className={`size-3.5 ${i < rating ? 'fill-tc-amber text-tc-amber' : 'text-tc-line'}`}
                     aria-hidden
                   />
                 ))}
               </span>
-              <span className="text-noon-muted">&amp; up</span>
+              <span className="text-tc-muted">&amp; up</span>
             </Link>
           );
         })}
@@ -161,8 +161,8 @@ export function FilterSidebar({ brands = [], tags = [], categories = [] }: Props
 
 function FilterGroup({ title, children }: { title: string; children: React.ReactNode }) {
   return (
-    <section className="rounded-lg border border-noon-line bg-white p-3">
-      <h3 className="mb-2 text-sm font-extrabold text-noon-ink">{title}</h3>
+    <section className="rounded-lg border border-tc-line bg-white p-3">
+      <h3 className="mb-2 text-sm font-extrabold text-tc-ink">{title}</h3>
       <div className="space-y-0.5">{children}</div>
     </section>
   );
@@ -183,18 +183,18 @@ function FilterRow({
     <Link
       href={href}
       className={`flex items-center justify-between gap-2 rounded px-2 py-1.5 text-sm transition
-        ${active ? 'bg-noon-bg font-semibold text-noon-ink' : 'text-noon-ink/80 hover:bg-noon-bg'}`}
+        ${active ? 'bg-tc-bg font-semibold text-tc-ink' : 'text-tc-ink/80 hover:bg-tc-bg'}`}
     >
       <span className="flex items-center gap-2 truncate">
         <span
           className={`grid size-4 shrink-0 place-items-center rounded border
-            ${active ? 'border-noon-blue bg-noon-blue' : 'border-noon-line'}`}
+            ${active ? 'border-tc-link bg-tc-link' : 'border-tc-line'}`}
         >
           {active && <span className="size-1.5 rounded-sm bg-white" />}
         </span>
         <span className="truncate">{label}</span>
       </span>
-      {count != null && <span className="shrink-0 text-xs text-noon-muted tabular">({count})</span>}
+      {count != null && <span className="shrink-0 text-xs text-tc-muted tabular">({count})</span>}
     </Link>
   );
 }

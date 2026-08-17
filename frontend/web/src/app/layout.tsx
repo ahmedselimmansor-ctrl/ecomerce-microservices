@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from 'next';
-import { Cairo } from 'next/font/google';
+import { Cairo, Bricolage_Grotesque } from 'next/font/google';
 import { Toaster } from 'sonner';
 import { Header } from '@/components/layout/Header';
 import { Footer } from '@/components/layout/Footer';
@@ -13,18 +13,30 @@ const appFont = Cairo({
   weight: ['400', '500', '600', '700', '800'],
 });
 
+/*
+ * وجه العرض للّاتيني فقط: الشعار وعناوين الأقسام اللاتينية. لا يحمل عربيًا،
+ * وهذا مقصود — العربي يبقى على Cairo، فينقسم النظام بالدور لا بالمزاج.
+ */
+const displayFont = Bricolage_Grotesque({
+  subsets: ['latin'],
+  variable: '--font-display',
+  display: 'swap',
+  weight: ['500', '600', '800'],
+});
+
 export const metadata: Metadata = {
   title: {
-    default: 'noon — تسوّق أونلاين في مصر',
-    template: '%s | noon',
+    default: 'TopChoice — تسوّق أونلاين في مصر',
+    template: '%s | TopChoice',
   },
   description:
     'تسوّق إلكترونيات، أزياء، جمال ومستلزمات المنزل بأسعار منافسة وتوصيل سريع.',
   metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL ?? 'http://localhost:3000'),
+  applicationName: 'TopChoice',
   openGraph: {
     type: 'website',
     locale: 'ar_EG',
-    siteName: 'noon',
+    siteName: 'TopChoice',
   },
   robots: { index: true, follow: true },
 };
@@ -32,12 +44,12 @@ export const metadata: Metadata = {
 export const viewport: Viewport = {
   width: 'device-width',
   initialScale: 1,
-  themeColor: '#feee00',
+  themeColor: '#0c4a54',
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="ar" dir="rtl" className={appFont.variable}>
+    <html lang="ar" dir="rtl" className={`${appFont.variable} ${displayFont.variable}`}>
       <head>
         {/* اتصال مبكر بالـ API يوفّر رحلة TLS كاملة عند أول طلب */}
         <link

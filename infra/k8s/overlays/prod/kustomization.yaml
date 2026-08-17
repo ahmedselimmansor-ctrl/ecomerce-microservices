@@ -1,7 +1,7 @@
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 
-namespace: noon
+namespace: topchoice
 
 resources:
   - ../../base
@@ -13,38 +13,38 @@ components:
 # الصور من ECR بوسم إصدار ثابت لا "latest".
 # النشر يبدّل الوسم عبر `kustomize edit set image` في خط الـ CI.
 images:
-  - name: noon/api-gateway
-    newName: ACCOUNT.dkr.ecr.me-south-1.amazonaws.com/noon/api-gateway
+  - name: topchoice/api-gateway
+    newName: ACCOUNT.dkr.ecr.me-south-1.amazonaws.com/topchoice/api-gateway
     newTag: v1.0.0
-  - name: noon/identity-service
-    newName: ACCOUNT.dkr.ecr.me-south-1.amazonaws.com/noon/identity-service
+  - name: topchoice/identity-service
+    newName: ACCOUNT.dkr.ecr.me-south-1.amazonaws.com/topchoice/identity-service
     newTag: v1.0.0
-  - name: noon/catalog-service
-    newName: ACCOUNT.dkr.ecr.me-south-1.amazonaws.com/noon/catalog-service
+  - name: topchoice/catalog-service
+    newName: ACCOUNT.dkr.ecr.me-south-1.amazonaws.com/topchoice/catalog-service
     newTag: v1.0.0
-  - name: noon/order-service
-    newName: ACCOUNT.dkr.ecr.me-south-1.amazonaws.com/noon/order-service
+  - name: topchoice/order-service
+    newName: ACCOUNT.dkr.ecr.me-south-1.amazonaws.com/topchoice/order-service
     newTag: v1.0.0
-  - name: noon/payment-service
-    newName: ACCOUNT.dkr.ecr.me-south-1.amazonaws.com/noon/payment-service
+  - name: topchoice/payment-service
+    newName: ACCOUNT.dkr.ecr.me-south-1.amazonaws.com/topchoice/payment-service
     newTag: v1.0.0
-  - name: noon/inventory-service
-    newName: ACCOUNT.dkr.ecr.me-south-1.amazonaws.com/noon/inventory-service
+  - name: topchoice/inventory-service
+    newName: ACCOUNT.dkr.ecr.me-south-1.amazonaws.com/topchoice/inventory-service
     newTag: v1.0.0
-  - name: noon/cart-service
-    newName: ACCOUNT.dkr.ecr.me-south-1.amazonaws.com/noon/cart-service
+  - name: topchoice/cart-service
+    newName: ACCOUNT.dkr.ecr.me-south-1.amazonaws.com/topchoice/cart-service
     newTag: v1.0.0
-  - name: noon/search-service
-    newName: ACCOUNT.dkr.ecr.me-south-1.amazonaws.com/noon/search-service
+  - name: topchoice/search-service
+    newName: ACCOUNT.dkr.ecr.me-south-1.amazonaws.com/topchoice/search-service
     newTag: v1.0.0
-  - name: noon/recommendation-service
-    newName: ACCOUNT.dkr.ecr.me-south-1.amazonaws.com/noon/recommendation-service
+  - name: topchoice/recommendation-service
+    newName: ACCOUNT.dkr.ecr.me-south-1.amazonaws.com/topchoice/recommendation-service
     newTag: v1.0.0
-  - name: noon/notification-service
-    newName: ACCOUNT.dkr.ecr.me-south-1.amazonaws.com/noon/notification-service
+  - name: topchoice/notification-service
+    newName: ACCOUNT.dkr.ecr.me-south-1.amazonaws.com/topchoice/notification-service
     newTag: v1.0.0
-  - name: noon/web
-    newName: ACCOUNT.dkr.ecr.me-south-1.amazonaws.com/noon/web
+  - name: topchoice/web
+    newName: ACCOUNT.dkr.ecr.me-south-1.amazonaws.com/topchoice/web
     newTag: v1.0.0
 
 patches:
@@ -87,7 +87,7 @@ patches:
 
   - target:
       kind: ConfigMap
-      name: noon-config
+      name: topchoice-config
     patch: |-
       - op: replace
         path: /data/DB_POOL_MAX

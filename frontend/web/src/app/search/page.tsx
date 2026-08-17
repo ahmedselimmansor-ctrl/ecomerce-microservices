@@ -95,10 +95,10 @@ export default async function SearchPage({ searchParams }: PageProps) {
 
   return (
     <div className="mx-auto max-w-[1440px] px-4 py-4">
-      <nav aria-label="مسار التصفح" className="mb-3 text-[13px] text-noon-muted">
-        <Link href="/" className="hover:text-noon-ink">Home</Link>
+      <nav aria-label="مسار التصفح" className="mb-3 text-[13px] text-tc-muted">
+        <Link href="/" className="hover:text-tc-ink">Home</Link>
         <span className="mx-2">/</span>
-        <span className="text-noon-ink">{q || 'All products'}</span>
+        <span className="text-tc-ink">{q || 'All products'}</span>
       </nav>
 
       <div className="grid gap-4 lg:grid-cols-[240px_minmax(0,1fr)]">
@@ -112,13 +112,13 @@ export default async function SearchPage({ searchParams }: PageProps) {
 
         <div className="space-y-4">
           <header className="flex flex-wrap items-center justify-between gap-3 rounded-lg
-                             border border-noon-line bg-white px-4 py-3">
+                             border border-tc-line bg-white px-4 py-3">
             <div>
-              <h1 className="text-[15px] font-bold text-noon-ink">
+              <h1 className="text-[15px] font-bold text-tc-ink">
                 {q ? <>Results for &laquo;{q}&raquo;</> : 'All products'}
               </h1>
               {!failed && (
-                <p className="text-[13px] text-noon-muted tabular">
+                <p className="text-[13px] text-tc-muted tabular">
                   {results.totalItems} products
                   {results.tookMs != null && <> · {results.tookMs}ms</>}
                 </p>
@@ -126,7 +126,7 @@ export default async function SearchPage({ searchParams }: PageProps) {
             </div>
 
             <div className="flex flex-wrap items-center gap-2">
-              <span className="text-[13px] text-noon-muted">Sort by:</span>
+              <span className="text-[13px] text-tc-muted">Sort by:</span>
               {SORTS.map((option) => {
                 const next = new URLSearchParams(query);
                 next.set('sort', option.key);
@@ -137,8 +137,8 @@ export default async function SearchPage({ searchParams }: PageProps) {
                     href={`/search?${next.toString()}`}
                     className={`rounded-full border px-3 py-1.5 text-[13px] transition
                       ${sort === option.key
-                        ? 'border-noon-ink bg-noon-ink text-white'
-                        : 'border-noon-line bg-white hover:border-noon-muted'}`}
+                        ? 'border-tc-ink bg-tc-ink text-white'
+                        : 'border-tc-line bg-white hover:border-tc-muted'}`}
                   >
                     {option.label}
                   </Link>
@@ -148,20 +148,20 @@ export default async function SearchPage({ searchParams }: PageProps) {
           </header>
 
           {failed ? (
-            <div className="rounded-lg border border-noon-line bg-white p-10 text-center">
+            <div className="rounded-lg border border-tc-line bg-white p-10 text-center">
               <h2 className="text-lg font-bold">البحث غير متاح مؤقتًا</h2>
-              <p className="mt-2 text-sm text-noon-muted">يمكنك التصفّح حسب الأقسام في الأثناء.</p>
+              <p className="mt-2 text-sm text-tc-muted">يمكنك التصفّح حسب الأقسام في الأثناء.</p>
               <Link
                 href="/"
-                className="mt-4 inline-flex rounded-lg bg-noon-yellow px-4 py-2 text-sm font-bold"
+                className="mt-4 inline-flex rounded-lg bg-tc-accent px-4 py-2 text-sm font-bold"
               >
                 العودة للرئيسية
               </Link>
             </div>
           ) : products.length === 0 ? (
-            <div className="rounded-lg border border-noon-line bg-white p-10 text-center">
+            <div className="rounded-lg border border-tc-line bg-white p-10 text-center">
               <h2 className="text-lg font-bold">لم نجد نتائج{q && ` لـ «${q}»`}</h2>
-              <p className="mt-2 text-sm text-noon-muted">جرّب كلمات أخرى أو أزل بعض الفلاتر.</p>
+              <p className="mt-2 text-sm text-tc-muted">جرّب كلمات أخرى أو أزل بعض الفلاتر.</p>
             </div>
           ) : (
             <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5">
@@ -176,18 +176,18 @@ export default async function SearchPage({ searchParams }: PageProps) {
               {page > 0 && (
                 <Link
                   href={pageHref(page - 1)}
-                  className="rounded-lg border border-noon-line bg-white px-4 py-2 text-sm"
+                  className="rounded-lg border border-tc-line bg-white px-4 py-2 text-sm"
                 >
                   Previous
                 </Link>
               )}
-              <span className="px-3 text-sm text-noon-muted tabular">
+              <span className="px-3 text-sm text-tc-muted tabular">
                 {page + 1} / {results.totalPages}
               </span>
               {results.hasNext && (
                 <Link
                   href={pageHref(page + 1)}
-                  className="rounded-lg border border-noon-line bg-white px-4 py-2 text-sm"
+                  className="rounded-lg border border-tc-line bg-white px-4 py-2 text-sm"
                 >
                   Next
                 </Link>

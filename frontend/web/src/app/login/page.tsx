@@ -66,13 +66,13 @@ function LoginForm() {
 
   return (
     <div className="mx-auto max-w-md px-4 py-10">
-      <div className="card-noon p-6">
+      <div className="card-tc p-6">
         <h1 className="text-xl font-extrabold">تسجيل الدخول</h1>
-        <p className="mt-1 text-sm text-noon-muted">أدخل بياناتك للمتابعة</p>
+        <p className="mt-1 text-sm text-tc-muted">أدخل بياناتك للمتابعة</p>
 
         <form onSubmit={handleSubmit} className="mt-6 space-y-4">
           <div>
-            <label htmlFor="email" className="mb-1 block text-xs font-medium text-noon-muted">
+            <label htmlFor="email" className="mb-1 block text-xs font-medium text-tc-muted">
               البريد الإلكتروني
             </label>
             <input
@@ -80,16 +80,16 @@ function LoginForm() {
               name="email"
               type="email"
               autoComplete="email"
-              defaultValue="demo@noon.local"
+              defaultValue="demo@topchoice.local"
               aria-invalid={Boolean(errors.email)}
               className={`w-full rounded-lg border px-3 py-2.5 text-sm
-                ${errors.email ? 'border-noon-red' : 'border-noon-line'}`}
+                ${errors.email ? 'border-tc-berry' : 'border-tc-line'}`}
             />
-            {errors.email && <p className="mt-1 text-xs text-noon-red">{errors.email}</p>}
+            {errors.email && <p className="mt-1 text-xs text-tc-berry">{errors.email}</p>}
           </div>
 
           <div>
-            <label htmlFor="password" className="mb-1 block text-xs font-medium text-noon-muted">
+            <label htmlFor="password" className="mb-1 block text-xs font-medium text-tc-muted">
               كلمة المرور
             </label>
             <input
@@ -100,15 +100,15 @@ function LoginForm() {
               defaultValue="Passw0rd!"
               aria-invalid={Boolean(errors.password)}
               className={`w-full rounded-lg border px-3 py-2.5 text-sm
-                ${errors.password ? 'border-noon-red' : 'border-noon-line'}`}
+                ${errors.password ? 'border-tc-berry' : 'border-tc-line'}`}
             />
-            {errors.password && <p className="mt-1 text-xs text-noon-red">{errors.password}</p>}
+            {errors.password && <p className="mt-1 text-xs text-tc-berry">{errors.password}</p>}
           </div>
 
           <button
             type="submit"
             disabled={submitting}
-            className="flex w-full items-center justify-center gap-2 rounded-lg bg-noon-yellow
+            className="flex w-full items-center justify-center gap-2 rounded-lg bg-tc-accent
                        py-2.5 text-sm font-extrabold transition hover:brightness-95
                        disabled:opacity-60"
           >
@@ -117,15 +117,15 @@ function LoginForm() {
           </button>
         </form>
 
-        <p className="mt-5 text-center text-sm text-noon-muted">
+        <p className="mt-5 text-center text-sm text-tc-muted">
           ليس لديك حساب؟{' '}
-          <Link href="/register" className="font-bold text-noon-blue hover:underline">
+          <Link href="/register" className="font-bold text-tc-link hover:underline">
             إنشاء حساب
           </Link>
         </p>
 
-        <p className="mt-4 rounded-lg bg-noon-bg p-3 text-xs leading-relaxed text-noon-muted">
-          حساب تجريبي جاهز: <code>demo@noon.local</code> / <code>Passw0rd!</code>
+        <p className="mt-4 rounded-lg bg-tc-bg p-3 text-xs leading-relaxed text-tc-muted">
+          حساب تجريبي جاهز: <code>demo@topchoice.local</code> / <code>Passw0rd!</code>
         </p>
       </div>
     </div>

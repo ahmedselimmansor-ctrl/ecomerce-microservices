@@ -11,7 +11,7 @@
     <relativePath/>
   </parent>
 
-  <groupId>com.noon</groupId>
+  <groupId>com.topchoice</groupId>
   <artifactId>catalog-service</artifactId>
   <version>1.0.0</version>
   <name>catalog-service</name>

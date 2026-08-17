@@ -31,7 +31,7 @@ run() {
 for svc in identity-service catalog-service order-service payment-service inventory-service; do
   run "java · ${svc}" docker run --rm \
     -v "$PWD/services/${svc}:/app" \
-    -v noon-maven-cache:/root/.m2 \
+    -v topchoice-maven-cache:/root/.m2 \
     -w /app \
     maven:3.9-eclipse-temurin-21 \
     mvn -B -q test

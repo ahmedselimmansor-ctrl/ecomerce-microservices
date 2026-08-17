@@ -80,7 +80,7 @@ resource "aws_secretsmanager_secret_version" "aurora" {
   secret_id = aws_secretsmanager_secret.aurora.id
 
   secret_string = jsonencode({
-    username = "noon_admin"
+    username = "topchoice_admin"
     password = random_password.aurora.result
     engine   = "postgres"
     host     = aws_rds_cluster.main.endpoint
@@ -95,8 +95,8 @@ resource "aws_rds_cluster" "main" {
   engine_version     = "16.4"
   engine_mode        = "provisioned"
 
-  database_name   = "noon"
-  master_username = "noon_admin"
+  database_name   = "topchoice"
+  master_username = "topchoice_admin"
   master_password = random_password.aurora.result
 
   db_subnet_group_name   = aws_db_subnet_group.main.name
@@ -256,7 +256,7 @@ resource "aws_secretsmanager_secret_version" "documentdb" {
   secret_id = aws_secretsmanager_secret.documentdb.id
 
   secret_string = jsonencode({
-    username = "noon_admin"
+    username = "topchoice_admin"
     password = random_password.documentdb.result
     host     = aws_docdb_cluster.main.endpoint
     reader   = aws_docdb_cluster.main.reader_endpoint
@@ -290,7 +290,7 @@ resource "aws_docdb_cluster" "main" {
   engine             = "docdb"
   engine_version     = "5.0.0"
 
-  master_username = "noon_admin"
+  master_username = "topchoice_admin"
   master_password = random_password.documentdb.result
 
   db_subnet_group_name            = aws_docdb_subnet_group.main.name

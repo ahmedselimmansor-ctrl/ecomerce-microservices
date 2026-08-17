@@ -102,4 +102,4 @@ async function plugin(app: FastifyInstance): Promise<void> {
 }
 
 /** بلا `fastify-plugin` يبقى `app.redis` غير معرّف خارج هذه الإضافة. */
-export const cachePlugin = fp(plugin, { name: 'noon-cache' });
+export const cachePlugin = fp(plugin, { name: 'topchoice-cache' });

@@ -197,10 +197,10 @@ module "app_irsa" {
     main = {
       provider_arn = module.eks.oidc_provider_arn
       namespace_service_accounts = [
-        "noon:notification-service",
-        "noon:recommendation-service",
-        "noon:search-service",
-        "noon:catalog-service",
+        "topchoice:notification-service",
+        "topchoice:recommendation-service",
+        "topchoice:search-service",
+        "topchoice:catalog-service",
       ]
     }
   }
@@ -208,7 +208,7 @@ module "app_irsa" {
 
 resource "aws_iam_policy" "app_runtime" {
   name        = "${local.name}-app-runtime"
-  description = "Least-privilege runtime permissions for noon services"
+  description = "Least-privilege runtime permissions for topchoice services"
 
   policy = jsonencode({
     Version = "2012-10-17"

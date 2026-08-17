@@ -1,8 +1,8 @@
 {
-  "name": "@noon/web",
+  "name": "@topchoice/web",
   "version": "1.0.0",
   "private": true,
-  "description": "Noon clone storefront — Next.js App Router",
+  "description": "TopChoice clone storefront — Next.js App Router",
   "scripts": {
     "dev": "next dev",
     "build": "next build",

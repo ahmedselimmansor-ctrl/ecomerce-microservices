@@ -107,7 +107,7 @@ export const useCart = create<CartState>()(
       },
     }),
     {
-      name: 'noon-cart',
+      name: 'topchoice-cart',
       // السلة نفسها تعيش على الخادم؛ محليًا نحفظ توكن الزائر فقط
       partialize: (state) => ({ guestToken: state.guestToken }),
     },

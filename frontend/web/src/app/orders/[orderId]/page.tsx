@@ -96,7 +96,7 @@ export default function OrderDetailPage({ params }: { params: Promise<{ orderId:
     return (
       <div className="mx-auto max-w-3xl px-4 py-16 text-center">
         <h1 className="text-xl font-extrabold">{error}</h1>
-        <Link href="/orders" className="mt-4 inline-flex rounded-lg bg-noon-yellow px-6 py-2.5 text-sm font-bold">
+        <Link href="/orders" className="mt-4 inline-flex rounded-lg bg-tc-accent px-6 py-2.5 text-sm font-bold">
           كل الطلبات
         </Link>
       </div>
@@ -106,7 +106,7 @@ export default function OrderDetailPage({ params }: { params: Promise<{ orderId:
   if (!order) {
     return (
       <div className="mx-auto max-w-3xl px-4 py-16 text-center">
-        <Loader2 className="mx-auto size-8 animate-spin text-noon-muted" aria-hidden />
+        <Loader2 className="mx-auto size-8 animate-spin text-tc-muted" aria-hidden />
       </div>
     );
   }
@@ -117,38 +117,38 @@ export default function OrderDetailPage({ params }: { params: Promise<{ orderId:
 
   return (
     <div className="mx-auto max-w-3xl space-y-4 px-4 py-6">
-      <nav className="text-sm text-noon-muted">
-        <Link href="/orders" className="hover:text-noon-ink">
+      <nav className="text-sm text-tc-muted">
+        <Link href="/orders" className="hover:text-tc-ink">
           طلباتي
         </Link>
         <span className="mx-2">/</span>
-        <span className="text-noon-ink tabular">{order.orderNumber}</span>
+        <span className="text-tc-ink tabular">{order.orderNumber}</span>
       </nav>
 
-      <header className="card-noon p-5">
+      <header className="card-tc p-5">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
             <h1 className="text-lg font-extrabold tabular">{order.orderNumber}</h1>
-            <p className="mt-1 text-xs text-noon-muted">{formatDate(order.createdAt)}</p>
+            <p className="mt-1 text-xs text-tc-muted">{formatDate(order.createdAt)}</p>
           </div>
           <StatusBadge status={order.status} label={status.label} tone={status.tone} />
         </div>
 
         {inFlight && (
-          <p className="mt-4 flex items-center gap-2 rounded-lg bg-noon-bg p-3 text-sm">
+          <p className="mt-4 flex items-center gap-2 rounded-lg bg-tc-bg p-3 text-sm">
             <Loader2 className="size-4 shrink-0 animate-spin" aria-hidden />
             جارٍ تأكيد المخزون والدفع… ستُحدَّث الصفحة تلقائيًا.
           </p>
         )}
 
         {order.failureReason && order.status === 'CANCELLED' && (
-          <p className="mt-4 rounded-lg bg-noon-red/10 p-3 text-sm text-noon-red">
+          <p className="mt-4 rounded-lg bg-tc-berry/10 p-3 text-sm text-tc-berry">
             سبب الإلغاء: {order.failureReason}
           </p>
         )}
       </header>
 
-      <section className="card-noon divide-y divide-noon-line">
+      <section className="card-tc divide-y divide-tc-line">
         <h2 className="p-4 text-base font-extrabold">المنتجات</h2>
         {order.items.map((item) => (
           <div key={item.sku} className="flex gap-3 p-4">
@@ -164,7 +164,7 @@ export default function OrderDetailPage({ params }: { params: Promise<{ orderId:
             </div>
             <div className="min-w-0 flex-1">
               <p className="line-clamp-2 text-sm font-medium">{item.title}</p>
-              <p className="mt-1 text-xs text-noon-muted tabular">
+              <p className="mt-1 text-xs text-tc-muted tabular">
                 {formatMoney(item.unitPriceMinor, order.currency)} × {item.quantity}
               </p>
             </div>
@@ -175,7 +175,7 @@ export default function OrderDetailPage({ params }: { params: Promise<{ orderId:
         ))}
       </section>
 
-      <section className="card-noon p-4">
+      <section className="card-tc p-4">
         <h2 className="mb-3 text-base font-extrabold">الفاتورة</h2>
         <dl className="space-y-2 text-sm">
           <Row label="المجموع الفرعي" value={formatMoney(order.subtotalMinor, order.currency)} />
@@ -183,7 +183,7 @@ export default function OrderDetailPage({ params }: { params: Promise<{ orderId:
             <Row
               label="الخصم"
               value={`- ${formatMoney(order.discountMinor, order.currency)}`}
-              tone="text-noon-green"
+              tone="text-tc-leaf"
             />
           )}
           <Row
@@ -191,7 +191,7 @@ export default function OrderDetailPage({ params }: { params: Promise<{ orderId:
             value={order.shippingMinor === 0 ? 'مجاني' : formatMoney(order.shippingMinor, order.currency)}
           />
           <Row label="ضريبة القيمة المضافة" value={formatMoney(order.taxMinor, order.currency)} />
-          <div className="flex justify-between border-t border-noon-line pt-2 text-base font-extrabold">
+          <div className="flex justify-between border-t border-tc-line pt-2 text-base font-extrabold">
             <dt>الإجمالي</dt>
             <dd className="tabular">{formatMoney(order.totalMinor, order.currency)}</dd>
           </div>
@@ -203,8 +203,8 @@ export default function OrderDetailPage({ params }: { params: Promise<{ orderId:
           type="button"
           onClick={handleCancel}
           disabled={cancelling}
-          className="w-full rounded-lg border border-noon-red py-2.5 text-sm font-bold
-                     text-noon-red transition hover:bg-noon-red/5 disabled:opacity-60"
+          className="w-full rounded-lg border border-tc-berry py-2.5 text-sm font-bold
+                     text-tc-berry transition hover:bg-tc-berry/5 disabled:opacity-60"
         >
           {cancelling ? 'جارٍ الإلغاء…' : 'إلغاء الطلب'}
         </button>
@@ -216,7 +216,7 @@ export default function OrderDetailPage({ params }: { params: Promise<{ orderId:
 function Row({ label, value, tone }: { label: string; value: string; tone?: string }) {
   return (
     <div className="flex justify-between">
-      <dt className="text-noon-muted">{label}</dt>
+      <dt className="text-tc-muted">{label}</dt>
       <dd className={`tabular ${tone ?? ''}`}>{value}</dd>
     </div>
   );
@@ -228,10 +228,10 @@ function StatusBadge({ status, label, tone }: { status: string; label: string; t
     : Clock;
 
   const classes: Record<string, string> = {
-    positive: 'bg-noon-green/10 text-noon-green',
-    warning: 'bg-noon-yellow/40 text-noon-ink',
-    negative: 'bg-noon-red/10 text-noon-red',
-    neutral: 'bg-noon-bg text-noon-muted',
+    positive: 'bg-tc-leaf/10 text-tc-leaf',
+    warning: 'bg-tc-accent/40 text-tc-ink',
+    negative: 'bg-tc-berry/10 text-tc-berry',
+    neutral: 'bg-tc-bg text-tc-muted',
   };
 
   return (

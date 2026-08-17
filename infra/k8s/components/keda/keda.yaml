@@ -10,7 +10,7 @@ apiVersion: keda.sh/v1alpha1
 kind: TriggerAuthentication
 metadata:
   name: msk-iam
-  namespace: noon
+  namespace: topchoice
 spec:
   podIdentity:
     provider: aws
@@ -20,7 +20,7 @@ apiVersion: keda.sh/v1alpha1
 kind: ScaledObject
 metadata:
   name: notification-service
-  namespace: noon
+  namespace: topchoice
 spec:
   scaleTargetRef:
     name: notification-service
@@ -46,7 +46,7 @@ apiVersion: keda.sh/v1alpha1
 kind: ScaledObject
 metadata:
   name: search-service-indexer
-  namespace: noon
+  namespace: topchoice
 spec:
   scaleTargetRef:
     name: search-service
@@ -76,7 +76,7 @@ apiVersion: keda.sh/v1alpha1
 kind: ScaledObject
 metadata:
   name: api-gateway-scheduled
-  namespace: noon
+  namespace: topchoice
   annotations:
     description: >-
       رفع الحد الأدنى قبل ذروة معروفة. التوسّع التفاعلي وحده متأخر جدًا

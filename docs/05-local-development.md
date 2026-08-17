@@ -36,7 +36,7 @@ make seed
 | OpenSearch Dashboards | http://localhost:5601 |
 | Mailpit (الإيميلات) | http://localhost:8025 |
 
-**حساب تجريبي:** `demo@noon.local` / `Passw0rd!`
+**حساب تجريبي:** `demo@topchoice.local` / `Passw0rd!`
 
 ---
 
@@ -121,19 +121,19 @@ NEXT_PUBLIC_API_URL=http://localhost:8080 npm run dev
 ```bash
 # PostgreSQL
 docker compose -f deploy/docker-compose.yml --env-file .env exec postgres \
-  psql -U noon -d noon_order -c "SELECT order_number, status, total_minor FROM orders ORDER BY created_at DESC LIMIT 5;"
+  psql -U topchoice -d topchoice_order -c "SELECT order_number, status, total_minor FROM orders ORDER BY created_at DESC LIMIT 5;"
 
 # المخزون والحجوزات
 docker compose -f deploy/docker-compose.yml --env-file .env exec postgres \
-  psql -U noon -d noon_inventory -c "SELECT sku, on_hand, reserved FROM stock_items LIMIT 5;"
+  psql -U topchoice -d topchoice_inventory -c "SELECT sku, on_hand, reserved FROM stock_items LIMIT 5;"
 
 # صندوق الأحداث (outbox)
 docker compose -f deploy/docker-compose.yml --env-file .env exec postgres \
-  psql -U noon -d noon_order -c "SELECT event_type, published_at, attempts FROM outbox ORDER BY created_at DESC LIMIT 10;"
+  psql -U topchoice -d topchoice_order -c "SELECT event_type, published_at, attempts FROM outbox ORDER BY created_at DESC LIMIT 10;"
 
 # MongoDB
 docker compose -f deploy/docker-compose.yml --env-file .env exec mongo \
-  mongosh --quiet -u noon -p noon_local_pw --authenticationDatabase admin noon_catalog \
+  mongosh --quiet -u topchoice -p topchoice_local_pw --authenticationDatabase admin topchoice_catalog \
   --eval 'db.products.countDocuments()'
 
 # Redis — محتوى السلة
@@ -162,14 +162,14 @@ make logs S=payment-service &
 # 3) نافذة ثالثة — أنشئ طلبًا
 TOKEN=$(curl -s -X POST localhost:8080/api/v1/auth/login \
   -H 'content-type: application/json' \
-  -d '{"email":"demo@noon.local","password":"Passw0rd!"}' \
+  -d '{"email":"demo@topchoice.local","password":"Passw0rd!"}' \
   | grep -o '"accessToken":"[^"]*' | cut -d'"' -f4)
 
 curl -s -X POST localhost:8080/api/v1/orders \
   -H "authorization: Bearer $TOKEN" \
   -H 'content-type: application/json' \
   -H "idempotency-key: $(uuidgen)" \
-  -d '{"items":[{"sku":"N-APL-IP15-128-BLK","quantity":1}],
+  -d '{"items":[{"sku":"TC-APL-IP15-128-BLK","quantity":1}],
        "shippingAddress":{"fullName":"Demo","phone":"+971500000001",
                           "line1":"Street 1","city":"Dubai","country":"AE"},
        "paymentMethod":"CARD"}' | python3 -m json.tool
@@ -187,12 +187,12 @@ PAYMENT_MOCK_FAILURE_RATE=1.0 make restart S=payment-service
 
 # سقوط Redis ⇒ الكتالوج يظل يعمل (أبطأ) والسلة تتوقف
 docker compose -f deploy/docker-compose.yml --env-file .env stop redis
-curl -s localhost:8080/api/v1/products/N-APL-IP15-128-BLK   # يعمل
+curl -s localhost:8080/api/v1/products/TC-APL-IP15-128-BLK   # يعمل
 curl -s localhost:8080/api/v1/cart -H 'x-guest-token: abcdefghij123456'  # يفشل
 
 # سقوط التوصيات ⇒ صفحة المنتج تعمل بلا قسم "مقترح لك"
 docker compose -f deploy/docker-compose.yml --env-file .env stop recommendation-service
-curl -s localhost:8080/api/v1/bff/pdp/N-APL-IP15-128-BLK | python3 -c "
+curl -s localhost:8080/api/v1/bff/pdp/TC-APL-IP15-128-BLK | python3 -c "
 import sys,json; d=json.load(sys.stdin)
 print('product ok:', bool(d['product']))
 print('recommended:', len(d['recommended']))"

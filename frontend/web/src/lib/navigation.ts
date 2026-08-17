@@ -843,8 +843,8 @@ export const FOOTER_COLUMNS = [
   },
   {
     title: 'Discover Now',
-    links: ['Brand Glossary', 'Back to School', 'noon Kuwait', 'noon Bahrain',
-      'noon Oman', 'noon Qatar'],
+    links: ['Brand Glossary', 'Back to School', 'Daily Deals', 'New Arrivals',
+      'Gift Cards', 'Clearance'],
     slug: 'electronics',
   },
 ];

@@ -96,7 +96,7 @@ export function HeroCarousel() {
           <p className="mt-3 text-base text-white/90 sm:text-xl">{slide.subtitle}</p>
           <span
             className="mt-6 inline-flex rounded-full bg-white px-8 py-3 text-sm font-extrabold
-                       text-noon-ink transition hover:brightness-95"
+                       text-tc-ink transition hover:brightness-95"
           >
             {slide.cta}
           </span>

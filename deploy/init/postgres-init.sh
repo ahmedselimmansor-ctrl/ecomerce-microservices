@@ -8,7 +8,7 @@
 # ============================================================================
 set -euo pipefail
 
-for db in noon_identity noon_order noon_payment noon_inventory; do
+for db in topchoice_identity topchoice_order topchoice_payment topchoice_inventory; do
   echo "creating database ${db}"
   psql -v ON_ERROR_STOP=1 --username "${POSTGRES_USER}" --dbname postgres <<-EOSQL
     SELECT 'CREATE DATABASE ${db}'

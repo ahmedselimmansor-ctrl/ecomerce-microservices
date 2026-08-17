@@ -143,7 +143,7 @@ export function ProductForm({ initial, mode }: Props) {
           <Link
             href="/admin/products"
             aria-label="رجوع"
-            className="grid size-9 place-items-center rounded-lg border border-noon-line bg-white"
+            className="grid size-9 place-items-center rounded-lg border border-tc-line bg-white"
           >
             <ArrowRight className="size-4 rtl:rotate-180" aria-hidden />
           </Link>
@@ -155,8 +155,8 @@ export function ProductForm({ initial, mode }: Props) {
         <button
           type="submit"
           disabled={submitting}
-          className="flex items-center gap-2 rounded-lg bg-noon-yellow px-6 py-2.5 text-sm
-                     font-extrabold text-noon-ink transition hover:brightness-95
+          className="flex items-center gap-2 rounded-lg bg-tc-accent px-6 py-2.5 text-sm
+                     font-extrabold text-tc-ink transition hover:brightness-95
                      disabled:opacity-60"
         >
           {submitting && <Loader2 className="size-4 animate-spin" aria-hidden />}
@@ -215,12 +215,12 @@ export function ProductForm({ initial, mode }: Props) {
                   }
                 }}
                 placeholder="https://…"
-                className="flex-1 rounded-lg border border-noon-line px-3 py-2 text-sm"
+                className="flex-1 rounded-lg border border-tc-line px-3 py-2 text-sm"
               />
               <button
                 type="button"
                 onClick={addImage}
-                className="flex items-center gap-1.5 rounded-lg border border-noon-line
+                className="flex items-center gap-1.5 rounded-lg border border-tc-line
                            bg-white px-4 py-2 text-sm font-semibold"
               >
                 <Plus className="size-4" aria-hidden /> إضافة
@@ -232,7 +232,7 @@ export function ProductForm({ initial, mode }: Props) {
                 {images.map((src, index) => (
                   <li key={`${src}-${index}`} className="relative">
                     <span className="relative block size-20 overflow-hidden rounded-lg
-                                     border border-noon-line bg-white">
+                                     border border-tc-line bg-white">
                       <Image src={src} alt="" fill sizes="80px" className="object-contain p-1" />
                     </span>
                     <button
@@ -240,7 +240,7 @@ export function ProductForm({ initial, mode }: Props) {
                       onClick={() => setImages((prev) => prev.filter((_, i) => i !== index))}
                       aria-label="حذف الصورة"
                       className="absolute -end-1.5 -top-1.5 grid size-6 place-items-center
-                                 rounded-full bg-noon-red text-white"
+                                 rounded-full bg-tc-berry text-white"
                     >
                       <Trash2 className="size-3" aria-hidden />
                     </button>
@@ -249,7 +249,7 @@ export function ProductForm({ initial, mode }: Props) {
               </ul>
             )}
 
-            <p className="mt-2 text-xs text-noon-muted">
+            <p className="mt-2 text-xs text-tc-muted">
               في الإنتاج تُرفع الصور إلى S3 وتُقدَّم عبر CloudFront. هنا نقبل روابط مباشرة.
             </p>
           </Section>
@@ -264,7 +264,7 @@ export function ProductForm({ initial, mode }: Props) {
                       prev.map((pair, i) => (i === index ? [e.target.value, pair[1]] : pair)))
                   }
                   placeholder="اسم الخاصية (color)"
-                  className="flex-1 rounded-lg border border-noon-line px-3 py-2 text-sm"
+                  className="flex-1 rounded-lg border border-tc-line px-3 py-2 text-sm"
                 />
                 <input
                   value={value}
@@ -273,14 +273,14 @@ export function ProductForm({ initial, mode }: Props) {
                       prev.map((pair, i) => (i === index ? [pair[0], e.target.value] : pair)))
                   }
                   placeholder="القيمة (Black)"
-                  className="flex-1 rounded-lg border border-noon-line px-3 py-2 text-sm"
+                  className="flex-1 rounded-lg border border-tc-line px-3 py-2 text-sm"
                 />
                 <button
                   type="button"
                   onClick={() => setAttributes((prev) => prev.filter((_, i) => i !== index))}
                   aria-label="حذف الخاصية"
-                  className="grid size-9 shrink-0 place-items-center rounded-lg text-noon-red
-                             hover:bg-noon-red/10"
+                  className="grid size-9 shrink-0 place-items-center rounded-lg text-tc-berry
+                             hover:bg-tc-berry/10"
                 >
                   <Trash2 className="size-4" aria-hidden />
                 </button>
@@ -290,7 +290,7 @@ export function ProductForm({ initial, mode }: Props) {
               type="button"
               onClick={() => setAttributes((prev) => [...prev, ['', '']])}
               className="flex items-center gap-1.5 rounded-lg border border-dashed
-                         border-noon-line px-3 py-2 text-sm font-semibold text-noon-blue"
+                         border-tc-line px-3 py-2 text-sm font-semibold text-tc-link"
             >
               <Plus className="size-4" aria-hidden /> إضافة خاصية
             </button>
@@ -336,8 +336,8 @@ export function ProductForm({ initial, mode }: Props) {
 
           <Section title="التصنيف">
             <div>
-              <label htmlFor="category" className="mb-1 block text-xs font-semibold text-noon-muted">
-                القسم <span className="text-noon-red">*</span>
+              <label htmlFor="category" className="mb-1 block text-xs font-semibold text-tc-muted">
+                القسم <span className="text-tc-berry">*</span>
               </label>
               <select
                 id="category"
@@ -345,7 +345,7 @@ export function ProductForm({ initial, mode }: Props) {
                 value={category}
                 onChange={(e) => setCategory(e.target.value)}
                 className={`w-full rounded-lg border px-3 py-2 text-sm
-                  ${errors.category ? 'border-noon-red' : 'border-noon-line'}`}
+                  ${errors.category ? 'border-tc-berry' : 'border-tc-line'}`}
               >
                 <option value="">— اختر —</option>
                 {NAV.map((c) => (
@@ -353,19 +353,19 @@ export function ProductForm({ initial, mode }: Props) {
                 ))}
               </select>
               {errors.category && (
-                <p className="mt-1 text-xs text-noon-red">{errors.category}</p>
+                <p className="mt-1 text-xs text-tc-berry">{errors.category}</p>
               )}
             </div>
 
             <div>
-              <label htmlFor="subCategory" className="mb-1 block text-xs font-semibold text-noon-muted">
+              <label htmlFor="subCategory" className="mb-1 block text-xs font-semibold text-tc-muted">
                 القسم الفرعي
               </label>
               <select
                 id="subCategory"
                 name="subCategory"
                 defaultValue={initial?.categoryPath[1] ?? ''}
-                className="w-full rounded-lg border border-noon-line px-3 py-2 text-sm"
+                className="w-full rounded-lg border border-tc-line px-3 py-2 text-sm"
               >
                 <option value="">— بدون —</option>
                 {uniqueSubs.map((slug) => (
@@ -379,7 +379,7 @@ export function ProductForm({ initial, mode }: Props) {
               <Field name="brandName" label="اسم العلامة" defaultValue={initial?.brandName ?? ''} />
             </div>
 
-            <Field name="sellerId" label="البائع" defaultValue={initial?.sellerId ?? 'noon-retail'} />
+            <Field name="sellerId" label="البائع" defaultValue={initial?.sellerId ?? 'topchoice-retail'} />
           </Section>
 
           <Section title="الوسوم والحالة">
@@ -396,7 +396,7 @@ export function ProductForm({ initial, mode }: Props) {
                   }
                 }}
                 placeholder="express, bestseller…"
-                className="flex-1 rounded-lg border border-noon-line px-3 py-2 text-sm"
+                className="flex-1 rounded-lg border border-tc-line px-3 py-2 text-sm"
               />
             </div>
             {tags.length > 0 && (
@@ -406,8 +406,8 @@ export function ProductForm({ initial, mode }: Props) {
                     <button
                       type="button"
                       onClick={() => setTags((prev) => prev.filter((t) => t !== tag))}
-                      className="rounded-full bg-noon-bg px-3 py-1 text-xs font-semibold
-                                 hover:bg-noon-red/10 hover:text-noon-red"
+                      className="rounded-full bg-tc-bg px-3 py-1 text-xs font-semibold
+                                 hover:bg-tc-berry/10 hover:text-tc-berry"
                     >
                       {tag} ✕
                     </button>
@@ -415,20 +415,20 @@ export function ProductForm({ initial, mode }: Props) {
                 ))}
               </ul>
             )}
-            <p className="text-xs text-noon-muted">
+            <p className="text-xs text-tc-muted">
               الوسوم تتحكم في شارات البطاقة: <code>bestseller</code> · <code>express</code> ·{' '}
               <code>low-stock</code> · <code>market</code>
             </p>
 
             <div>
-              <label htmlFor="status" className="mb-1 block text-xs font-semibold text-noon-muted">
+              <label htmlFor="status" className="mb-1 block text-xs font-semibold text-tc-muted">
                 الحالة
               </label>
               <select
                 id="status"
                 name="status"
                 defaultValue={initial?.status ?? 'ACTIVE'}
-                className="w-full rounded-lg border border-noon-line px-3 py-2 text-sm"
+                className="w-full rounded-lg border border-tc-line px-3 py-2 text-sm"
               >
                 <option value="ACTIVE">نشط — يظهر في المتجر</option>
                 <option value="INACTIVE">غير نشط — مخفي</option>
@@ -437,9 +437,9 @@ export function ProductForm({ initial, mode }: Props) {
             </div>
           </Section>
 
-          <div className="rounded-lg border border-noon-line bg-white p-3">
-            <p className="mb-2 text-xs font-semibold text-noon-muted">معاينة البطاقة</p>
-            <div className="relative aspect-square overflow-hidden rounded bg-noon-bg">
+          <div className="rounded-lg border border-tc-line bg-white p-3">
+            <p className="mb-2 text-xs font-semibold text-tc-muted">معاينة البطاقة</p>
+            <div className="relative aspect-square overflow-hidden rounded bg-tc-bg">
               <Image
                 src={images[0] || PLACEHOLDER_IMAGE}
                 alt=""
@@ -458,7 +458,7 @@ export function ProductForm({ initial, mode }: Props) {
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
-    <section className="space-y-3 rounded-lg border border-noon-line bg-white p-4">
+    <section className="space-y-3 rounded-lg border border-tc-line bg-white p-4">
       <h2 className="text-base font-extrabold">{title}</h2>
       {children}
     </section>
@@ -482,14 +482,14 @@ function Field({
   name, label, type = 'text', step, defaultValue, error, required, readOnly, hint, textarea,
 }: FieldProps) {
   const className = `w-full rounded-lg border px-3 py-2 text-sm
-    ${error ? 'border-noon-red' : 'border-noon-line'}
-    ${readOnly ? 'bg-noon-bg text-noon-muted' : ''}`;
+    ${error ? 'border-tc-berry' : 'border-tc-line'}
+    ${readOnly ? 'bg-tc-bg text-tc-muted' : ''}`;
 
   return (
     <div>
-      <label htmlFor={name} className="mb-1 block text-xs font-semibold text-noon-muted">
+      <label htmlFor={name} className="mb-1 block text-xs font-semibold text-tc-muted">
         {label}
-        {required && <span className="text-noon-red"> *</span>}
+        {required && <span className="text-tc-berry"> *</span>}
       </label>
 
       {textarea ? (
@@ -514,8 +514,8 @@ function Field({
         />
       )}
 
-      {error && <p className="mt-1 text-xs text-noon-red">{error}</p>}
-      {hint && !error && <p className="mt-1 text-xs text-noon-muted">{hint}</p>}
+      {error && <p className="mt-1 text-xs text-tc-berry">{error}</p>}
+      {hint && !error && <p className="mt-1 text-xs text-tc-muted">{hint}</p>}
     </div>
   );
 }

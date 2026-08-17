@@ -27,7 +27,7 @@ const layout = (title: string, body: string): string => `<!doctype html>
       <table role="presentation" width="600" cellpadding="0" cellspacing="0"
              style="background:#fff;border-radius:12px;overflow:hidden">
         <tr><td style="background:#feee00;padding:20px;text-align:center">
-          <span style="font-size:24px;font-weight:800;color:#404553">noon</span>
+          <span style="font-size:24px;font-weight:800;color:#404553">topchoice</span>
         </td></tr>
         <tr><td style="padding:28px;color:#404553;line-height:1.7;font-size:15px">${body}</td></tr>
         <tr><td style="padding:16px;background:#fafafa;text-align:center;color:#9ba0b1;font-size:12px">
@@ -90,11 +90,11 @@ export const templates: Record<string, (data: TemplateData) => RenderedMessage> 
   welcome: (data) => {
     const name = escape(data['fullName'] ?? 'عميلنا العزيز');
     return {
-      subject: 'أهلًا بك في noon',
+      subject: 'أهلًا بك في topchoice',
       html: layout('مرحبًا', `
         <h2 style="margin:0 0 12px">أهلًا ${name}!</h2>
         <p>حسابك جاهز الآن. استمتع بتجربة تسوّق سريعة وآمنة.</p>`),
-      text: `أهلًا ${name}! حسابك في noon جاهز.`,
+      text: `أهلًا ${name}! حسابك في topchoice جاهز.`,
     };
   },
 };

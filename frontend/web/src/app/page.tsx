@@ -96,7 +96,7 @@ export default async function HomePage() {
             subtitle: 'adidas · Reebok & more',
             cta: 'SHOP NOW',
             href: '/category/shoes',
-            className: 'bg-noon-yellow',
+            className: 'bg-tc-accent',
           }}
         />
       )}
@@ -105,21 +105,21 @@ export default async function HomePage() {
         title="Back to school essentials"
         href="/category/stationery"
         tiles={TILES.BACK_TO_SCHOOL}
-        className="bg-noon-lilac p-4"
+        className="bg-tc-plum-soft p-4"
       />
 
       <CategoryTiles
         title="Automotive sale · 13–15 August"
         href="/category/automotive"
         tiles={TILES.AUTOMOTIVE_TILES}
-        className="bg-noon-bg p-4"
+        className="bg-tc-bg p-4"
       />
 
       <CouponZone />
 
       {home.deals.length > 0 && (
-        <section className="overflow-hidden rounded-lg bg-noon-ink p-4">
-          <h2 className="mb-4 text-center text-3xl font-extrabold text-noon-orange">MEGA DEALS</h2>
+        <section className="overflow-hidden rounded-lg bg-tc-ink p-4">
+          <h2 className="mb-4 text-center text-3xl font-extrabold text-tc-amber">MEGA DEALS</h2>
           <div className="rounded-lg bg-white p-3">
             <ProductRail products={home.deals} />
           </div>
@@ -132,9 +132,9 @@ export default async function HomePage() {
       <CategoryTiles title="Electronics" href="/category/electronics" tiles={TILES.ELECTRONICS_TILES} />
       <ProductRail title="Electronics picks" products={electronics} href="/category/electronics" />
 
-      <CategoryTiles title="Men's fashion" href="/category/mens-fashion" tiles={TILES.MENS_TILES} className="bg-noon-bg p-4" />
-      <CategoryTiles title="Women's fashion" href="/category/womens-fashion" tiles={TILES.WOMENS_TILES} className="bg-noon-bg p-4" />
-      <CategoryTiles title="Kids' fashion" href="/category/kids-fashion" tiles={TILES.KIDS_TILES} className="bg-noon-bg p-4" />
+      <CategoryTiles title="Men's fashion" href="/category/mens-fashion" tiles={TILES.MENS_TILES} className="bg-tc-bg p-4" />
+      <CategoryTiles title="Women's fashion" href="/category/womens-fashion" tiles={TILES.WOMENS_TILES} className="bg-tc-bg p-4" />
+      <CategoryTiles title="Kids' fashion" href="/category/kids-fashion" tiles={TILES.KIDS_TILES} className="bg-tc-bg p-4" />
       <ProductRail title="Fashion picks" products={fashion} href="/category/shoes" />
 
       <CategoryTiles title="Beauty" href="/category/beauty" tiles={TILES.BEAUTY_TILES} />
@@ -159,8 +159,8 @@ export default async function HomePage() {
       {isEmpty && (
         <div className="rounded-lg bg-white p-10 text-center">
           <h2 className="text-lg font-bold">لا توجد منتجات بعد</h2>
-          <p className="mt-2 text-sm text-noon-muted">
-            شغّل <code className="rounded bg-noon-bg px-1.5 py-0.5">make seed</code> لتحميل
+          <p className="mt-2 text-sm text-tc-muted">
+            شغّل <code className="rounded bg-tc-bg px-1.5 py-0.5">make seed</code> لتحميل
             بيانات تجريبية.
           </p>
         </div>

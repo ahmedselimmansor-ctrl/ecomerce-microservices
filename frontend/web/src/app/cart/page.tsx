@@ -62,12 +62,12 @@ export default function CartPage() {
   if (items.length === 0) {
     return (
       <div className="mx-auto max-w-5xl px-4 py-16 text-center">
-        <ShoppingBag className="mx-auto size-16 text-noon-line" aria-hidden />
+        <ShoppingBag className="mx-auto size-16 text-tc-line" aria-hidden />
         <h1 className="mt-4 text-xl font-extrabold">سلتك فارغة</h1>
-        <p className="mt-2 text-sm text-noon-muted">ابدأ التسوّق وأضف منتجاتك المفضلة.</p>
+        <p className="mt-2 text-sm text-tc-muted">ابدأ التسوّق وأضف منتجاتك المفضلة.</p>
         <Link
           href="/"
-          className="mt-6 inline-flex rounded-lg bg-noon-yellow px-6 py-2.5 text-sm font-bold"
+          className="mt-6 inline-flex rounded-lg bg-tc-accent px-6 py-2.5 text-sm font-bold"
         >
           تصفّح المنتجات
         </Link>
@@ -84,11 +84,11 @@ export default function CartPage() {
   return (
     <div className="mx-auto max-w-6xl px-4 py-6">
       <h1 className="mb-4 text-xl font-extrabold sm:text-2xl">
-        سلة التسوّق <span className="text-noon-muted tabular">({items.length})</span>
+        سلة التسوّق <span className="text-tc-muted tabular">({items.length})</span>
       </h1>
 
       <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_320px]">
-        <ul className="card-noon divide-y divide-noon-line">
+        <ul className="card-tc divide-y divide-tc-line">
           {items.map((item) => {
             const product = products.get(item.sku);
             const available = snapshot?.availability[item.sku];
@@ -118,23 +118,23 @@ export default function CartPage() {
                     {product?.title ?? item.sku}
                   </Link>
                   {product?.brandName && (
-                    <span className="text-xs text-noon-muted">{product.brandName}</span>
+                    <span className="text-xs text-tc-muted">{product.brandName}</span>
                   )}
 
                   {outOfStock && (
-                    <span className="text-xs font-semibold text-noon-red">
+                    <span className="text-xs font-semibold text-tc-berry">
                       متوفر منه {available} فقط
                     </span>
                   )}
 
                   <div className="mt-auto flex items-center gap-2 pt-2">
-                    <div className="flex items-center rounded-lg border border-noon-line">
+                    <div className="flex items-center rounded-lg border border-tc-line">
                       <button
                         type="button"
                         onClick={() => void change(item.sku, item.quantity - 1)}
                         disabled={busy === item.sku}
                         aria-label="إنقاص الكمية"
-                        className="grid size-8 place-items-center hover:bg-noon-bg disabled:opacity-50"
+                        className="grid size-8 place-items-center hover:bg-tc-bg disabled:opacity-50"
                       >
                         <Minus className="size-3.5" aria-hidden />
                       </button>
@@ -146,7 +146,7 @@ export default function CartPage() {
                         onClick={() => void change(item.sku, item.quantity + 1)}
                         disabled={busy === item.sku || item.quantity >= 20}
                         aria-label="زيادة الكمية"
-                        className="grid size-8 place-items-center hover:bg-noon-bg disabled:opacity-50"
+                        className="grid size-8 place-items-center hover:bg-tc-bg disabled:opacity-50"
                       >
                         <Plus className="size-3.5" aria-hidden />
                       </button>
@@ -157,8 +157,8 @@ export default function CartPage() {
                       onClick={() => void remove(item.sku)}
                       disabled={busy === item.sku}
                       aria-label={`إزالة ${product?.title ?? item.sku}`}
-                      className="grid size-8 place-items-center rounded-lg text-noon-red
-                                 hover:bg-noon-red/10 disabled:opacity-50"
+                      className="grid size-8 place-items-center rounded-lg text-tc-berry
+                                 hover:bg-tc-berry/10 disabled:opacity-50"
                     >
                       <Trash2 className="size-4" aria-hidden />
                     </button>
@@ -176,50 +176,50 @@ export default function CartPage() {
           })}
         </ul>
 
-        <aside className="card-noon h-fit space-y-3 p-4 lg:sticky lg:top-24">
+        <aside className="card-tc h-fit space-y-3 p-4 lg:sticky lg:top-24">
           <h2 className="text-base font-extrabold">ملخّص الطلب</h2>
 
           {remainingForFreeShipping > 0 && (
-            <p className="rounded-lg bg-noon-yellow/30 p-2.5 text-xs">
+            <p className="rounded-lg bg-tc-accent/30 p-2.5 text-xs">
               أضف بقيمة{' '}
               <strong className="tabular">{formatMoney(remainingForFreeShipping)}</strong>{' '}
               للحصول على شحن مجاني
             </p>
           )}
 
-          <dl className="space-y-2 border-t border-noon-line pt-3 text-sm">
+          <dl className="space-y-2 border-t border-tc-line pt-3 text-sm">
             <div className="flex justify-between">
-              <dt className="text-noon-muted">المجموع الفرعي</dt>
+              <dt className="text-tc-muted">المجموع الفرعي</dt>
               <dd className="tabular">{formatMoney(subtotal)}</dd>
             </div>
             <div className="flex justify-between">
-              <dt className="text-noon-muted">الشحن</dt>
+              <dt className="text-tc-muted">الشحن</dt>
               <dd className="tabular">
                 {shipping === 0 ? (
-                  <span className="font-semibold text-noon-green">مجاني</span>
+                  <span className="font-semibold text-tc-leaf">مجاني</span>
                 ) : (
                   formatMoney(shipping)
                 )}
               </dd>
             </div>
             <div className="flex justify-between">
-              <dt className="text-noon-muted">ضريبة القيمة المضافة ({VAT_PERCENT}%)</dt>
+              <dt className="text-tc-muted">ضريبة القيمة المضافة ({VAT_PERCENT}%)</dt>
               <dd className="tabular">{formatMoney(vat)}</dd>
             </div>
-            <div className="flex justify-between border-t border-noon-line pt-2
+            <div className="flex justify-between border-t border-tc-line pt-2
                             text-base font-extrabold">
               <dt>الإجمالي</dt>
               <dd className="tabular">{formatMoney(total)}</dd>
             </div>
           </dl>
 
-          <p className="text-[11px] leading-relaxed text-noon-muted">
+          <p className="text-[11px] leading-relaxed text-tc-muted">
             الإجمالي النهائي يُحتسب على الخادم وقت إتمام الطلب من أسعار الكتالوج.
           </p>
 
           <Link
             href="/checkout"
-            className="block rounded-lg bg-noon-yellow py-3 text-center text-sm
+            className="block rounded-lg bg-tc-accent py-3 text-center text-sm
                        font-extrabold transition hover:brightness-95"
           >
             إتمام الشراء

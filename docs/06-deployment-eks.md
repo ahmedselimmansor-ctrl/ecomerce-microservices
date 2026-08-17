@@ -22,21 +22,21 @@ ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
 REGION=me-south-1
 
 aws s3api create-bucket \
-  --bucket "noon-tfstate-${ACCOUNT_ID}" \
+  --bucket "topchoice-tfstate-${ACCOUNT_ID}" \
   --region "$REGION" \
   --create-bucket-configuration LocationConstraint="$REGION"
 
 aws s3api put-bucket-versioning \
-  --bucket "noon-tfstate-${ACCOUNT_ID}" \
+  --bucket "topchoice-tfstate-${ACCOUNT_ID}" \
   --versioning-configuration Status=Enabled
 
 aws s3api put-bucket-encryption \
-  --bucket "noon-tfstate-${ACCOUNT_ID}" \
+  --bucket "topchoice-tfstate-${ACCOUNT_ID}" \
   --server-side-encryption-configuration \
   '{"Rules":[{"ApplyServerSideEncryptionByDefault":{"SSEAlgorithm":"AES256"}}]}'
 
 aws dynamodb create-table \
-  --table-name noon-tf-locks \
+  --table-name topchoice-tf-locks \
   --attribute-definitions AttributeName=LockID,AttributeType=S \
   --key-schema AttributeName=LockID,KeyType=HASH \
   --billing-mode PAY_PER_REQUEST \
@@ -66,7 +66,7 @@ terraform -chdir=infra/terraform output
 ## 4. تثبيت مكوّنات العنقود
 
 ```bash
-make kubeconfig CLUSTER=noon-dev REGION=me-south-1
+make kubeconfig CLUSTER=topchoice-dev REGION=me-south-1
 ./scripts/bootstrap-cluster.sh
 ```
 
@@ -77,8 +77,8 @@ make kubeconfig CLUSTER=noon-dev REGION=me-south-1
 ```bash
 helm upgrade --install karpenter oci://public.ecr.aws/karpenter/karpenter \
   --version "1.0.8" --namespace kube-system \
-  --set "settings.clusterName=noon-dev" \
-  --set "settings.interruptionQueue=noon-dev" \
+  --set "settings.clusterName=topchoice-dev" \
+  --set "settings.interruptionQueue=topchoice-dev" \
   --wait
 
 kubectl apply -f - <<'EOF'
@@ -118,13 +118,13 @@ metadata:
   name: default
 spec:
   amiFamily: AL2023
-  role: "KarpenterNodeRole-noon-dev"
+  role: "KarpenterNodeRole-topchoice-dev"
   subnetSelectorTerms:
     - tags:
-        karpenter.sh/discovery: "noon-dev"
+        karpenter.sh/discovery: "topchoice-dev"
   securityGroupSelectorTerms:
     - tags:
-        karpenter.sh/discovery: "noon-dev"
+        karpenter.sh/discovery: "topchoice-dev"
 EOF
 ```
 
@@ -139,15 +139,15 @@ REGION=me-south-1
 ENV=dev
 
 aws secretsmanager create-secret --region $REGION \
-  --name "noon-${ENV}/app/jwt" \
+  --name "topchoice-${ENV}/app/jwt" \
   --secret-string "{\"secret\":\"$(openssl rand -hex 32)\"}"
 
 aws secretsmanager create-secret --region $REGION \
-  --name "noon-${ENV}/app/payment" \
+  --name "topchoice-${ENV}/app/payment" \
   --secret-string '{"apiKey":"sk_live_replace_me"}'
 
 aws secretsmanager create-secret --region $REGION \
-  --name "noon-${ENV}/app/personalize" \
+  --name "topchoice-${ENV}/app/personalize" \
   --secret-string '{"campaignUserArn":"","trackingId":""}'
 ```
 
@@ -195,13 +195,13 @@ cd infra/k8s/overlays/dev
 for s in api-gateway identity-service catalog-service order-service payment-service \
          inventory-service cart-service search-service recommendation-service \
          notification-service web; do
-  kustomize edit set image "noon/${s}=${ECR_REGISTRY}/noon/${s}:v1.0.0"
+  kustomize edit set image "topchoice/${s}=${ECR_REGISTRY}/topchoice/${s}:v1.0.0"
 done
 cd -
 
 kubectl diff -k infra/k8s/overlays/dev    # عاين قبل التطبيق
 kubectl apply -k infra/k8s/overlays/dev
-kubectl get pods -n noon -w
+kubectl get pods -n topchoice -w
 ```
 
 ---
@@ -212,7 +212,7 @@ kubectl get pods -n noon -w
 # ترحيلات قواعد البيانات تُنفَّذ تلقائيًا بـ Flyway عند إقلاع كل خدمة.
 # يبقى إنشاء topics في MSK (auto.create معطّل عمدًا في الإنتاج):
 
-kubectl run kafka-admin -n noon --rm -it --restart=Never \
+kubectl run kafka-admin -n topchoice --rm -it --restart=Never \
   --image=apache/kafka:3.8.1 -- bash -c '
 for t in catalog.product.v1:6 order.events.v1:12 inventory.events.v1:12 \
          payment.events.v1:12 user.interactions.v1:6 notification.commands.v1:3; do
@@ -233,9 +233,9 @@ done'
 ## 10. التحقق
 
 ```bash
-kubectl get pods -n noon
-kubectl get ingress -n noon
-ALB=$(kubectl get ingress noon -n noon -o jsonpath='{.status.loadBalancer.ingress[0].hostname}')
+kubectl get pods -n topchoice
+kubectl get ingress -n topchoice
+ALB=$(kubectl get ingress topchoice -n topchoice -o jsonpath='{.status.loadBalancer.ingress[0].hostname}')
 
 GATEWAY_URL="https://${ALB}" ./scripts/smoke-test.sh
 ```
@@ -275,8 +275,8 @@ spec:
 ### 11.2 الاسترجاع
 
 ```bash
-kubectl rollout undo deployment/order-service -n noon
-kubectl rollout status deployment/order-service -n noon
+kubectl rollout undo deployment/order-service -n topchoice
+kubectl rollout status deployment/order-service -n topchoice
 ```
 
 > **تحذير مهم:** ترحيلات قاعدة البيانات **لا تُسترجَع** مع الكود. القاعدة: كل ترحيل يجب أن يكون متوافقًا مع الإصدارين (expand/contract): أضف عمودًا ⇒ انشر الكود ⇒ في إصدار لاحق احذف القديم.
@@ -294,10 +294,10 @@ kubectl port-forward -n monitoring svc/kube-prometheus-grafana 3001:80
 
 | المقياس | التنبيه عند |
 |---|---|
-| `noon_outbox_pending` | > 1000 لمدة 5 دقائق ⇒ الـ Saga متوقفة |
+| `topchoice_outbox_pending` | > 1000 لمدة 5 دقائق ⇒ الـ Saga متوقفة |
 | `kafka_consumergroup_lag` | > 10000 ⇒ المستهلك لا يلحق |
-| `noon_orders_total{result="rejected"}` | ارتفاع مفاجئ ⇒ مشكلة في المخزون أو الدفع |
-| `noon_payment_gateway_duration` p99 | > 3s ⇒ مزوّد الدفع متأخر |
+| `topchoice_orders_total{result="rejected"}` | ارتفاع مفاجئ ⇒ مشكلة في المخزون أو الدفع |
+| `topchoice_payment_gateway_duration` p99 | > 3s ⇒ مزوّد الدفع متأخر |
 | `http_server_requests_seconds` p95 | > 500ms ⇒ تدهور أداء |
 | `aurora_cpu` / `DatabaseConnections` | > 80% ⇒ الحاجة لنسخة قارئة إضافية |
 

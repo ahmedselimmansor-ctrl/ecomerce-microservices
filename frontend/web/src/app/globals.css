@@ -1,30 +1,54 @@
 @import "tailwindcss";
 
 /* ============================================================================
-   نظام التصميم — مطابق لهوية noon البصرية.
-   القيم مأخوذة من الواجهة الفعلية: الأصفر، لون النص الأساسي، ألوان الحالة.
+   نظام تصميم TopChoice — «Petrol & Saffron»
+   ----------------------------------------------------------------------------
+   الألوان مشتقّة من عالم السوق نفسه لا من لوحة عامة: أزرق البترول من قيشاني
+   الخزف الإسلامي، الزعفران من سوق العطارة، والرمّاني من ثمرة الرمّان.
+
+   القاعدة الحاكمة للاستخدام — وهي ما يمنع الصفحة من التحوّل إلى كرنفال:
+     • البترولي  يملك «الكروم» فقط: الهيدر، الفوتر، الأسطح البنيوية.
+     • الزعفران  يملك «الفعل» فقط: زر أساسي واحد لكل شاشة، والشارات.
+     • البقية    دلالية بحتة: الرمّاني للتخفيض، الورقي للتوفير، الأزرق للروابط.
+   لا يُستخدم أي لون منها للتزيين. إن لم يكن اللون يحمل معنى، فالرمادي أصحّ.
    ========================================================================= */
 
 @theme {
-  --color-noon-yellow: #feee00;
-  --color-noon-yellow-dark: #e5d600;
-  --color-noon-ink: #404553;
-  --color-noon-muted: #7e859b;
-  --color-noon-line: #e2e5f1;
-  --color-noon-bg: #f7f7fa;
-  --color-noon-blue: #3866df;
-  --color-noon-red: #ef3f4b;
-  --color-noon-green: #38ae04;
-  --color-noon-green-dark: #1e5b3a;
-  --color-noon-orange: #f3a847;
-  --color-noon-purple: #7e2ee8;
-  --color-noon-lilac: #e8e4fb;
+  /* العلامة — الكروم */
+  --color-tc-brand: #0c4a54;
+  --color-tc-brand-deep: #07333b;
+  --color-tc-brand-soft: #e6f2f3;
 
+  /* الفعل — الزعفران. نص غامق فوقه دائمًا، لا أبيض. */
+  --color-tc-accent: #f5a524;
+  --color-tc-accent-deep: #c97f0a;
+
+  /* المحايدات — حبر بميل بترولي حتى يتناغم النص مع العلامة */
+  --color-tc-ink: #10242b;
+  --color-tc-muted: #5c7079;
+  --color-tc-line: #dce6e9;
+  --color-tc-bg: #f3f7f8;
+
+  /* الدلالية */
+  --color-tc-berry: #d81e5b;
+  --color-tc-leaf: #0e9f6e;
+  --color-tc-leaf-deep: #075e43;
+  --color-tc-amber: #e8850c;
+  --color-tc-link: #1d63c9;
+  --color-tc-plum: #7a3ea1;
+  --color-tc-plum-soft: #efe6f7;
+
+  /*
+   * خطّان بدورين لا بمزاجين: Cairo للعربي وكل نص الواجهة، وBricolage
+   * للّاتيني — الشعار والأرقام. الأرقام في متجر هي أكثر ما تُقرأ، فتستحق
+   * وجهًا خاصًا بها.
+   */
   --font-sans: var(--font-app), system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-display: var(--font-display), var(--font-app), system-ui, sans-serif;
 
-  --radius-noon: 0.5rem;
-  --shadow-noon: 0 1px 3px rgb(64 69 83 / 0.08);
-  --shadow-noon-hover: 0 4px 16px rgb(64 69 83 / 0.14);
+  --radius-tc: 0.625rem;
+  --shadow-tc: 0 1px 2px rgb(16 36 43 / 0.06), 0 1px 3px rgb(16 36 43 / 0.05);
+  --shadow-tc-hover: 0 6px 20px rgb(12 74 84 / 0.13);
 }
 
 :root {
@@ -36,8 +60,8 @@ html {
 }
 
 body {
-  background: var(--color-noon-bg);
-  color: var(--color-noon-ink);
+  background: var(--color-tc-bg);
+  color: var(--color-tc-ink);
   -webkit-font-smoothing: antialiased;
 }
 
@@ -49,8 +73,13 @@ body {
   unicode-bidi: isolate;
 }
 
+/*
+ * حلقة التركيز زعفرانية لا زرقاء: هي اللون الوحيد في النظام الذي يحتفظ
+ * بتباين كافٍ فوق البترولي الغامق وفوق الأبيض معًا، فتعمل في الهيدر
+ * وفي بقية الصفحة بقاعدة واحدة.
+ */
 :focus-visible {
-  outline: 2px solid var(--color-noon-blue);
+  outline: 2.5px solid var(--color-tc-accent);
   outline-offset: 2px;
   border-radius: 4px;
 }
@@ -71,9 +100,9 @@ body {
 }
 
 /*
- * شارة express المائلة.
- * noon تستخدم متوازي أضلاع — نُنفّذه بـ skew على العنصر وعكسه على النص
- * الداخلي حتى تبقى الحروف مستقيمة.
+ * شارة التوصيل السريع: متوازي أضلاع يميل للأمام.
+ * الميل يقرأ كحركة — والحركة هي ما تبيعه الشارة. نُنفّذه بـ skew على العنصر
+ * وعكسه على النص الداخلي حتى تبقى الحروف مستقيمة.
  */
 .badge-skew {
   transform: skewX(-12deg);
@@ -92,18 +121,18 @@ body {
   min-height: 2.5rem;
 }
 
-@utility card-noon {
+@utility card-tc {
   background: white;
-  border-radius: var(--radius-noon);
-  border: 1px solid var(--color-noon-line);
+  border-radius: var(--radius-tc);
+  border: 1px solid var(--color-tc-line);
 }
 
 @utility skeleton {
   background: linear-gradient(
     90deg,
-    var(--color-noon-line) 25%,
-    color-mix(in srgb, var(--color-noon-line) 45%, white) 50%,
-    var(--color-noon-line) 75%
+    var(--color-tc-line) 25%,
+    color-mix(in srgb, var(--color-tc-line) 45%, white) 50%,
+    var(--color-tc-line) 75%
   );
   background-size: 200% 100%;
   animation: shimmer 1.4s ease-in-out infinite;

@@ -8,8 +8,8 @@
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
-  name: noon
-  namespace: noon
+  name: topchoice
+  namespace: topchoice
   annotations:
     kubernetes.io/ingress.class: alb
     alb.ingress.kubernetes.io/scheme: internet-facing
@@ -39,7 +39,7 @@ metadata:
       access_logs.s3.prefix=alb
 
     alb.ingress.kubernetes.io/wafv2-acl-arn: "REPLACE_WITH_WAF_ARN"
-    alb.ingress.kubernetes.io/tags: Project=noon-clone,ManagedBy=kubernetes
+    alb.ingress.kubernetes.io/tags: Project=topchoice-clone,ManagedBy=kubernetes
 
 spec:
   rules:

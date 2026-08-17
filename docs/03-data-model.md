@@ -4,11 +4,11 @@
 
 | المخزن | الخدمة | السبب |
 |---|---|---|
-| PostgreSQL `noon_identity` | identity | علاقات + ACID |
-| PostgreSQL `noon_order` | order | معاملات + تدقيق محاسبي |
-| PostgreSQL `noon_payment` | payment | متطلبات مالية صارمة |
-| PostgreSQL `noon_inventory` | inventory | حجز متزامن يحتاج قفل صفوف |
-| MongoDB `noon_catalog` | catalog | مخطط متغيّر لكل قسم |
+| PostgreSQL `topchoice_identity` | identity | علاقات + ACID |
+| PostgreSQL `topchoice_order` | order | معاملات + تدقيق محاسبي |
+| PostgreSQL `topchoice_payment` | payment | متطلبات مالية صارمة |
+| PostgreSQL `topchoice_inventory` | inventory | حجز متزامن يحتاج قفل صفوف |
+| MongoDB `topchoice_catalog` | catalog | مخطط متغيّر لكل قسم |
 | Redis | cart · gateway · recommendation | زمن استجابة تحت المللي ثانية |
 | OpenSearch | search | بحث نصي + facets |
 | DynamoDB | gateway | idempotency + sessions مع TTL |
@@ -109,7 +109,7 @@ refunds(id UUID PK, payment_id UUID FK, amount_minor BIGINT,
 // collection: products
 {
   _id: ObjectId,
-  sku: "N-APL-IP15-128-BLK",            // فريد
+  sku: "TC-APL-IP15-128-BLK",            // فريد
   slug: "apple-iphone-15-128gb-black",
   title:    { ar: "ابل ايفون 15", en: "Apple iPhone 15" },
   description: { ar: "...", en: "..." },
@@ -120,7 +120,7 @@ refunds(id UUID PK, payment_id UUID FK, amount_minor BIGINT,
   attributes: { color: "Black", storage: "128GB", ram: "6GB" },  // متغيّر لكل قسم
   variants: [ { sku: "...", attributes: { color: "Blue" }, priceMinor: 299900 } ],
   rating: { average: 4.6, count: 1284 },
-  sellerId: "noon-retail",
+  sellerId: "topchoice-retail",
   tags: ["express", "bestseller"],
   status: "ACTIVE",
   createdAt: ISODate, updatedAt: ISODate, version: 7
@@ -201,9 +201,9 @@ db.products.createIndex({ "title.ar": "text", "title.en": "text", tags: "text" }
 
 | الجدول | PK | SK | TTL | الغرض |
 |---|---|---|---|---|
-| `noon-idempotency` | `key` | — | `expiresAt` | منع تكرار الطلبات |
-| `noon-sessions` | `sid` | — | `expiresAt` | جلسات الويب |
-| `noon-user-events` | `userId` | `ts#eventId` | `expiresAt` | تفاعلات لـ Personalize |
+| `topchoice-idempotency` | `key` | — | `expiresAt` | منع تكرار الطلبات |
+| `topchoice-sessions` | `sid` | — | `expiresAt` | جلسات الويب |
+| `topchoice-user-events` | `userId` | `ts#eventId` | `expiresAt` | تفاعلات لـ Personalize |
 
 ---
 
@@ -239,7 +239,7 @@ db.products.createIndex({ "title.ar": "text", "title.en": "text", tags: "text" }
 ```json
 // order.created
 { "orderId":"...", "userId":"...", "currency":"AED", "totalMinor":299900,
-  "items":[{"sku":"N-APL-IP15-128-BLK","quantity":1,"unitPriceMinor":299900}] }
+  "items":[{"sku":"TC-APL-IP15-128-BLK","quantity":1,"unitPriceMinor":299900}] }
 
 // inventory.reserved / inventory.rejected
 { "orderId":"...", "reservations":[{"sku":"...","quantity":1}],

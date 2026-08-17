@@ -1,12 +1,12 @@
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 
-namespace: noon
+namespace: topchoice
 
 labels:
   - includeSelectors: false
     pairs:
-      app.kubernetes.io/part-of: noon
+      app.kubernetes.io/part-of: topchoice
       app.kubernetes.io/managed-by: kustomize
 
 resources:
@@ -29,25 +29,25 @@ resources:
   - 60-networkpolicy.yaml
 
 images:
-  - name: noon/api-gateway
+  - name: topchoice/api-gateway
     newTag: dev
-  - name: noon/identity-service
+  - name: topchoice/identity-service
     newTag: dev
-  - name: noon/catalog-service
+  - name: topchoice/catalog-service
     newTag: dev
-  - name: noon/order-service
+  - name: topchoice/order-service
     newTag: dev
-  - name: noon/payment-service
+  - name: topchoice/payment-service
     newTag: dev
-  - name: noon/inventory-service
+  - name: topchoice/inventory-service
     newTag: dev
-  - name: noon/cart-service
+  - name: topchoice/cart-service
     newTag: dev
-  - name: noon/search-service
+  - name: topchoice/search-service
     newTag: dev
-  - name: noon/recommendation-service
+  - name: topchoice/recommendation-service
     newTag: dev
-  - name: noon/notification-service
+  - name: topchoice/notification-service
     newTag: dev
-  - name: noon/web
+  - name: topchoice/web
     newTag: dev

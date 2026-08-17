@@ -17,8 +17,8 @@ RUN --mount=type=cache,target=/root/.cache/pip,sharing=locked \
 
 COPY app ./app
 
-RUN useradd --create-home --uid 10001 noon && chown -R noon:noon /app
-USER noon
+RUN useradd --create-home --uid 10001 topchoice && chown -R topchoice:topchoice /app
+USER topchoice
 
 EXPOSE 8088
 

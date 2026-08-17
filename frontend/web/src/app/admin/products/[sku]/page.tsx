@@ -31,12 +31,12 @@ export default function EditProductPage({ params }: { params: Promise<{ sku: str
 
   if (error) {
     return (
-      <div className="rounded-lg border border-noon-line bg-white p-10 text-center">
-        <AlertTriangle className="mx-auto size-10 text-noon-red" aria-hidden />
+      <div className="rounded-lg border border-tc-line bg-white p-10 text-center">
+        <AlertTriangle className="mx-auto size-10 text-tc-berry" aria-hidden />
         <p className="mt-3 font-bold">{error}</p>
         <Link
           href="/admin/products"
-          className="mt-4 inline-flex rounded-lg bg-noon-yellow px-6 py-2.5 text-sm font-bold"
+          className="mt-4 inline-flex rounded-lg bg-tc-accent px-6 py-2.5 text-sm font-bold"
         >
           العودة للقائمة
         </Link>
@@ -47,7 +47,7 @@ export default function EditProductPage({ params }: { params: Promise<{ sku: str
   if (!product) {
     return (
       <div className="grid h-64 place-items-center">
-        <Loader2 className="size-8 animate-spin text-noon-muted" aria-hidden />
+        <Loader2 className="size-8 animate-spin text-tc-muted" aria-hidden />
       </div>
     );
   }

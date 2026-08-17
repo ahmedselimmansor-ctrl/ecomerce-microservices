@@ -373,7 +373,7 @@ provider "aws" {
 
   default_tags {
     tags = {
-      Project     = "noon-clone"
+      Project     = "topchoice-clone"
       Environment = var.environment
       ManagedBy   = "terraform"
     }

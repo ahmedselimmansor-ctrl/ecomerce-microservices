@@ -23,10 +23,10 @@ terraform {
   # الحالة في S3 مع قفل عبر DynamoDB — شرط أساسي للعمل الجماعي.
   # فعّل هذا بعد إنشاء الـ bucket والجدول يدويًا مرة واحدة.
   # backend "s3" {
-  #   bucket         = "noon-tfstate-<account-id>"
+  #   bucket         = "topchoice-tfstate-<account-id>"
   #   key            = "platform/terraform.tfstate"
   #   region         = "me-south-1"
-  #   dynamodb_table = "noon-tf-locks"
+  #   dynamodb_table = "topchoice-tf-locks"
   #   encrypt        = true
   # }
 }
@@ -36,7 +36,7 @@ provider "aws" {
 
   default_tags {
     tags = {
-      Project     = "noon-clone"
+      Project     = "topchoice-clone"
       Environment = var.environment
       ManagedBy   = "terraform"
       Owner       = var.owner

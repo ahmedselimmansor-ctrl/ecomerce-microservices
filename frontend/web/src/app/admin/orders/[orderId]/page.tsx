@@ -70,12 +70,12 @@ export default function AdminOrderDetailPage({
 
   if (error) {
     return (
-      <div className="rounded-lg border border-noon-line bg-white p-10 text-center">
-        <AlertTriangle className="mx-auto size-10 text-noon-red" aria-hidden />
+      <div className="rounded-lg border border-tc-line bg-white p-10 text-center">
+        <AlertTriangle className="mx-auto size-10 text-tc-berry" aria-hidden />
         <p className="mt-3 font-bold">{error}</p>
         <Link
           href="/admin/orders"
-          className="mt-4 inline-flex rounded-lg bg-noon-yellow px-6 py-2.5 text-sm font-bold"
+          className="mt-4 inline-flex rounded-lg bg-tc-accent px-6 py-2.5 text-sm font-bold"
         >
           العودة للقائمة
         </Link>
@@ -86,7 +86,7 @@ export default function AdminOrderDetailPage({
   if (!order) {
     return (
       <div className="grid h-64 place-items-center">
-        <Loader2 className="size-8 animate-spin text-noon-muted" aria-hidden />
+        <Loader2 className="size-8 animate-spin text-tc-muted" aria-hidden />
       </div>
     );
   }
@@ -102,13 +102,13 @@ export default function AdminOrderDetailPage({
           <Link
             href="/admin/orders"
             aria-label="رجوع"
-            className="grid size-9 place-items-center rounded-lg border border-noon-line bg-white"
+            className="grid size-9 place-items-center rounded-lg border border-tc-line bg-white"
           >
             <ArrowRight className="size-4 rtl:rotate-180" aria-hidden />
           </Link>
           <div>
             <h1 className="text-xl font-extrabold tabular sm:text-2xl">{order.orderNumber}</h1>
-            <p className="text-xs text-noon-muted">{formatDate(order.createdAt)}</p>
+            <p className="text-xs text-tc-muted">{formatDate(order.createdAt)}</p>
           </div>
         </div>
 
@@ -118,7 +118,7 @@ export default function AdminOrderDetailPage({
       </header>
 
       {allowed.length > 0 && (
-        <section className="rounded-lg border border-noon-line bg-white p-4">
+        <section className="rounded-lg border border-tc-line bg-white p-4">
           <h2 className="mb-3 text-base font-extrabold">تغيير الحالة</h2>
           <div className="flex flex-wrap gap-2">
             {allowed.map((status) => {
@@ -132,8 +132,8 @@ export default function AdminOrderDetailPage({
                   className={`flex items-center gap-2 rounded-lg px-4 py-2.5 text-sm font-bold
                     transition disabled:opacity-60
                     ${isCancel
-                      ? 'border border-noon-red text-noon-red hover:bg-noon-red/5'
-                      : 'bg-noon-yellow text-noon-ink hover:brightness-95'}`}
+                      ? 'border border-tc-berry text-tc-berry hover:bg-tc-berry/5'
+                      : 'bg-tc-accent text-tc-ink hover:brightness-95'}`}
                 >
                   {busy && <Loader2 className="size-4 animate-spin" aria-hidden />}
                   {isCancel && !busy && <XCircle className="size-4" aria-hidden />}
@@ -143,7 +143,7 @@ export default function AdminOrderDetailPage({
             })}
           </div>
           {order.status === 'CONFIRMED' && (
-            <p className="mt-3 text-xs text-noon-muted">
+            <p className="mt-3 text-xs text-tc-muted">
               الشحن يرسل إشعارًا للعميل تلقائيًا عبر notification-service.
             </p>
           )}
@@ -151,20 +151,20 @@ export default function AdminOrderDetailPage({
       )}
 
       {order.failureReason && (
-        <p className="rounded-lg bg-noon-red/10 p-3 text-sm text-noon-red">
+        <p className="rounded-lg bg-tc-berry/10 p-3 text-sm text-tc-berry">
           سبب الفشل/الإلغاء: {order.failureReason}
         </p>
       )}
 
       <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_320px]">
-        <section className="rounded-lg border border-noon-line bg-white">
-          <h2 className="border-b border-noon-line p-4 text-base font-extrabold">
+        <section className="rounded-lg border border-tc-line bg-white">
+          <h2 className="border-b border-tc-line p-4 text-base font-extrabold">
             المنتجات ({order.items.length})
           </h2>
-          <ul className="divide-y divide-noon-line">
+          <ul className="divide-y divide-tc-line">
             {order.items.map((item) => (
               <li key={item.sku} className="flex gap-3 p-4">
-                <span className="relative size-16 shrink-0 overflow-hidden rounded bg-noon-bg">
+                <span className="relative size-16 shrink-0 overflow-hidden rounded bg-tc-bg">
                   <Image
                     src={item.imageUrl || PLACEHOLDER_IMAGE}
                     alt=""
@@ -176,8 +176,8 @@ export default function AdminOrderDetailPage({
                 </span>
                 <div className="min-w-0 flex-1">
                   <p className="line-clamp-2 text-sm font-medium">{item.title}</p>
-                  <p className="mt-1 font-mono text-[11px] text-noon-muted">{item.sku}</p>
-                  <p className="text-xs text-noon-muted tabular">
+                  <p className="mt-1 font-mono text-[11px] text-tc-muted">{item.sku}</p>
+                  <p className="text-xs text-tc-muted tabular">
                     {formatMoney(item.unitPriceMinor, order.currency)} × {item.quantity}
                   </p>
                 </div>
@@ -190,7 +190,7 @@ export default function AdminOrderDetailPage({
         </section>
 
         <div className="space-y-4">
-          <section className="rounded-lg border border-noon-line bg-white p-4">
+          <section className="rounded-lg border border-tc-line bg-white p-4">
             <h2 className="mb-3 text-base font-extrabold">الفاتورة</h2>
             <dl className="space-y-2 text-sm">
               <Row label="المجموع الفرعي" value={formatMoney(order.subtotalMinor, order.currency)} />
@@ -198,7 +198,7 @@ export default function AdminOrderDetailPage({
                 <Row
                   label="الخصم"
                   value={`- ${formatMoney(order.discountMinor, order.currency)}`}
-                  tone="text-noon-green"
+                  tone="text-tc-leaf"
                 />
               )}
               <Row
@@ -206,14 +206,14 @@ export default function AdminOrderDetailPage({
                 value={order.shippingMinor === 0 ? 'مجاني' : formatMoney(order.shippingMinor, order.currency)}
               />
               <Row label="الضريبة" value={formatMoney(order.taxMinor, order.currency)} />
-              <div className="flex justify-between border-t border-noon-line pt-2
+              <div className="flex justify-between border-t border-tc-line pt-2
                               text-base font-extrabold">
                 <dt>الإجمالي</dt>
                 <dd className="tabular">{formatMoney(order.totalMinor, order.currency)}</dd>
               </div>
             </dl>
-            <p className="mt-3 border-t border-noon-line pt-3 text-xs text-noon-muted">
-              طريقة الدفع: <strong className="text-noon-ink">{order.paymentMethod}</strong>
+            <p className="mt-3 border-t border-tc-line pt-3 text-xs text-tc-muted">
+              طريقة الدفع: <strong className="text-tc-ink">{order.paymentMethod}</strong>
               {order.paymentId && (
                 <>
                   <br />
@@ -223,10 +223,10 @@ export default function AdminOrderDetailPage({
             </p>
           </section>
 
-          <section className="rounded-lg border border-noon-line bg-white p-4">
+          <section className="rounded-lg border border-tc-line bg-white p-4">
             <h2 className="mb-3 text-base font-extrabold">عنوان الشحن</h2>
-            <address className="space-y-1 text-sm not-italic text-noon-ink/80">
-              <p className="font-semibold text-noon-ink">{address.fullName}</p>
+            <address className="space-y-1 text-sm not-italic text-tc-ink/80">
+              <p className="font-semibold text-tc-ink">{address.fullName}</p>
               <p className="tabular">{address.phone}</p>
               <p>{address.line1}</p>
               {address.line2 && <p>{address.line2}</p>}
@@ -244,7 +244,7 @@ export default function AdminOrderDetailPage({
 function Row({ label, value, tone }: { label: string; value: string; tone?: string }) {
   return (
     <div className="flex justify-between">
-      <dt className="text-noon-muted">{label}</dt>
+      <dt className="text-tc-muted">{label}</dt>
       <dd className={`tabular ${tone ?? ''}`}>{value}</dd>
     </div>
   );

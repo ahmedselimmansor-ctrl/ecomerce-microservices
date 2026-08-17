@@ -8,7 +8,7 @@
 const formatters = new Map<string, Intl.NumberFormat>();
 
 /**
- * @param withCurrency عند `false` نعيد الرقم وحده — noon تعرض رمز العملة
+ * @param withCurrency عند `false` نعيد الرقم وحده — نعرض رمز العملة
  *   في عنصر منفصل بحجم أصغر ("EGP" ثم الرقم بخط عريض).
  */
 export function formatMoney(
@@ -32,7 +32,7 @@ export function formatMoney(
   return formatter.format(minorAmount / 100);
 }
 
-/** noon تختصر أعداد التقييمات: 29500 ← 29.5K */
+/** نختصر أعداد التقييمات حتى لا تزحم البطاقة: 29500 ← 29.5K */
 export function formatCount(value: number): string {
   if (value >= 1_000_000) return `${(value / 1_000_000).toFixed(1)}M`;
   if (value >= 1_000) return `${(value / 1_000).toFixed(1)}K`;
@@ -85,10 +85,10 @@ export function orderStatus(status: string) {
 }
 
 export const STATUS_TONE_CLASS: Record<string, string> = {
-  positive: 'bg-noon-green/10 text-noon-green',
-  warning: 'bg-noon-yellow/40 text-noon-ink',
-  negative: 'bg-noon-red/10 text-noon-red',
-  neutral: 'bg-noon-bg text-noon-muted',
+  positive: 'bg-tc-leaf/10 text-tc-leaf',
+  warning: 'bg-tc-accent/40 text-tc-ink',
+  negative: 'bg-tc-berry/10 text-tc-berry',
+  neutral: 'bg-tc-bg text-tc-muted',
 };
 
 /** صورة بديلة عند غياب صورة المنتج — تمنع تخطيطًا مكسورًا. */

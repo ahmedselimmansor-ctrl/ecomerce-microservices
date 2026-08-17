@@ -15,7 +15,7 @@ spring:
     timeout-per-shutdown-phase: 25s
   data:
     mongodb:
-      uri: ${MONGO_URI:mongodb://noon:noon_local_pw@localhost:27017/noon_catalog?authSource=admin}
+      uri: ${MONGO_URI:mongodb://topchoice:topchoice_local_pw@localhost:27017/topchoice_catalog?authSource=admin}
       auto-index-creation: false     # الفهارس تُدار عبر MongoIndexInitializer صراحةً
     redis:
       host: ${REDIS_HOST:localhost}
@@ -41,7 +41,7 @@ spring:
         compression.type: lz4
         linger.ms: 20
 
-noon:
+topchoice:
   catalog:
     topic: catalog.product.v1
     default-page-size: 24
@@ -66,5 +66,5 @@ management:
 logging:
   level:
     root: INFO
-    com.noon: ${LOG_LEVEL:INFO}
+    com.topchoice: ${LOG_LEVEL:INFO}
     org.springframework.data.mongodb.core.MongoTemplate: ${MONGO_LOG_LEVEL:INFO}

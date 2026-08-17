@@ -39,8 +39,8 @@ echo "=============================================="
 echo ""
 echo "1) access control"
 
-ADMIN=$(login "admin@noon.local" "Admin@123")
-CUSTOMER=$(login "demo@noon.local" "Passw0rd!")
+ADMIN=$(login "admin@topchoice.local" "Admin@123")
+CUSTOMER=$(login "demo@topchoice.local" "Passw0rd!")
 
 if [ -z "$ADMIN" ]; then
   red "  FAIL  admin login failed"
@@ -93,7 +93,7 @@ check "CREATE" "$(auth -X PUT "${GW}/api/v1/admin/products" \
     \"currency\": \"EGP\", \"priceMinor\": 125050, \"wasMinor\": 180000,
     \"images\": [\"https://example.com/a.jpg\"],
     \"attributes\": { \"color\": \"Black\" }, \"tags\": [\"express\"],
-    \"sellerId\": \"noon-retail\", \"status\": \"ACTIVE\"
+    \"sellerId\": \"topchoice-retail\", \"status\": \"ACTIVE\"
   }")" 200
 
 READ=$(curl -s -H "authorization: Bearer ${ADMIN}" \

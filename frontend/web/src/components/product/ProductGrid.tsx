@@ -11,7 +11,7 @@ interface Props {
 export function ProductGrid({ products, title, subtitle, emptyMessage }: Props) {
   if (products.length === 0) {
     return emptyMessage ? (
-      <section className="card-noon p-8 text-center text-noon-muted">{emptyMessage}</section>
+      <section className="card-tc p-8 text-center text-tc-muted">{emptyMessage}</section>
     ) : null;
   }
 
@@ -19,8 +19,8 @@ export function ProductGrid({ products, title, subtitle, emptyMessage }: Props) 
     <section className="space-y-3">
       {title && (
         <header className="flex items-baseline justify-between gap-3">
-          <h2 className="text-lg font-extrabold text-noon-ink sm:text-xl">{title}</h2>
-          {subtitle && <p className="text-sm text-noon-muted">{subtitle}</p>}
+          <h2 className="text-lg font-extrabold text-tc-ink sm:text-xl">{title}</h2>
+          {subtitle && <p className="text-sm text-tc-muted">{subtitle}</p>}
         </header>
       )}
 
