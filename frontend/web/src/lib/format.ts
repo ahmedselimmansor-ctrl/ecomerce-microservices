@@ -96,8 +96,8 @@ export const PLACEHOLDER_IMAGE =
   'data:image/svg+xml;utf8,' +
   encodeURIComponent(
     `<svg xmlns="http://www.w3.org/2000/svg" width="400" height="400" viewBox="0 0 400 400">
-      <rect width="400" height="400" fill="#f7f7fa"/>
-      <text x="200" y="205" font-family="system-ui" font-size="18" fill="#7e859b"
+      <rect width="400" height="400" fill="#f3f7f8"/>
+      <text x="200" y="205" font-family="system-ui" font-size="18" fill="#5c7079"
             text-anchor="middle">no image</text>
     </svg>`,
   );

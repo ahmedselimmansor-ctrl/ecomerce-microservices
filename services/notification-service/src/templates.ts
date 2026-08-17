@@ -26,10 +26,17 @@ const layout = (title: string, body: string): string => `<!doctype html>
     <tr><td align="center">
       <table role="presentation" width="600" cellpadding="0" cellspacing="0"
              style="background:#fff;border-radius:12px;overflow:hidden">
-        <tr><td style="background:#feee00;padding:20px;text-align:center">
-          <span style="font-size:24px;font-weight:800;color:#404553">topchoice</span>
+        <!--
+          قفل الشعار كما في الويب: أبيض + زعفراني على البترولي. لا نستخدم SVG
+          هنا لأن عملاء البريد يحجبونه — الحروف أضمن من الصورة.
+        -->
+        <tr><td style="background:#0c4a54;padding:20px;text-align:center">
+          <span style="font-size:24px;letter-spacing:-.02em">
+            <span style="font-weight:500;color:#ffffff">Top</span><span
+                  style="font-weight:800;color:#f5a524">Choice</span>
+          </span>
         </td></tr>
-        <tr><td style="padding:28px;color:#404553;line-height:1.7;font-size:15px">${body}</td></tr>
+        <tr><td style="padding:28px;color:#10242b;line-height:1.7;font-size:15px">${body}</td></tr>
         <tr><td style="padding:16px;background:#fafafa;text-align:center;color:#9ba0b1;font-size:12px">
           هذه رسالة آلية — الرجاء عدم الرد عليها.
         </td></tr>

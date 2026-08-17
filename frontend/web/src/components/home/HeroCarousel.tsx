@@ -23,7 +23,7 @@ const SLIDES: Slide[] = [
     cta: 'SHOP NOW',
     href: '/category/automotive',
     gradient: 'linear-gradient(100deg,#0b0b0d 0%,#0b0b0d 42%,#b8410c 68%,#f0850f 100%)',
-    accent: '#feee00',
+    accent: '#f5a524',
   },
   {
     id: 'coffee',
@@ -40,8 +40,8 @@ const SLIDES: Slide[] = [
     subtitle: 'Laptops, phones and wearables — up to 45% off',
     cta: 'SHOP NOW',
     href: '/category/electronics',
-    gradient: 'linear-gradient(100deg,#0f1b3d 0%,#1e3a8a 55%,#3866df 100%)',
-    accent: '#feee00',
+    gradient: 'linear-gradient(100deg,#061e24 0%,#0c4a54 55%,#17808f 100%)',
+    accent: '#f5a524',
   },
   {
     id: 'beauty',
