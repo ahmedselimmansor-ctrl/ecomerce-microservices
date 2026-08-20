@@ -21,7 +21,7 @@ public class ProductController {
     }
 
     /**
-     * ترويسة {@code Cache-Control} هنا هي ما يجعل CloudFront يخزّن الاستجابة
+     * ترويسة {@code Cache-Control} هنا هي ما يجعل Cloud CDN يخزّن الاستجابة
      * على الحافة، فيصل جزء كبير من حركة القراءة إلى المستخدم دون لمس الـ pods.
      */
     @GetMapping("/{sku}")

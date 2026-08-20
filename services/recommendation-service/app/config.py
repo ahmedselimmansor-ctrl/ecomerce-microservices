@@ -10,17 +10,30 @@ class Settings(BaseSettings):
     host: str = "0.0.0.0"
     log_level: str = "INFO"
 
-    aws_region: str = "me-south-1"
-    aws_endpoint_url: str | None = None
+    gcp_project_id: str = ""
 
-    # ---- Amazon Personalize ------------------------------------------------
-    # حملة لكل وصفة (recipe). فراغ أي منها ⇒ يعمل البديل الداخلي تلقائيًا،
+    # ---- Vertex AI Search for commerce (Retail API) ------------------------
+    # كتالوج التجزئة يسكن `global` لا إقليم الحوسبة: نسخة واحدة تخدم كل
+    # الأقاليم، ولا وجود لكتالوج إقليمي في me-central1 يمكن الإشارة إليه.
+    retail_location: str = "global"
+    retail_catalog: str = "default_catalog"
+    # المجموعة التي تُبنى منها مسارات النماذج. `servingConfigs` هي الواجهة
+    # الحالية و`placements` القديمة ما تزال مقبولة — جعلناها متغيّرًا كي لا
+    # يحتاج التراجع إلى إعادة بناء الصورة.
+    retail_placement: str = "servingConfigs"
+
+    # serving config لكل نموذج. فراغ أي منها ⇒ يعمل البديل الداخلي تلقائيًا،
     # فتبقى الخدمة صالحة للتطوير المحلي ولليوم الأول قبل تدريب النموذج.
-    personalize_campaign_user: str = ""      # user-personalization-v2
-    personalize_campaign_related: str = ""   # similar-items
-    personalize_campaign_ranking: str = ""   # personalized-ranking
-    personalize_tracking_id: str = ""        # event tracker
-    personalize_timeout_seconds: float = 0.6
+    retail_serving_config_user: str = ""      # recommended-for-you
+    retail_serving_config_related: str = ""   # similar-items
+    retail_serving_config_ranking: str = ""   # search + personalization
+    # كتابة أحداث المستخدم مطفأة افتراضيًا: بيانات تصفّح بيئة تطوير تُلوّث
+    # الكتالوج الحقيقي ولا يمكن سحبها منه بعد وصولها.
+    retail_user_events_enabled: bool = False
+    # منفذ بديل لواجهة Retail — يخدم الوصول عبر Private Service Connect.
+    # لا يوجد محاكي محلي لهذه الواجهة، فتركه فارغًا هو الوضع الطبيعي.
+    retail_api_endpoint: str | None = None
+    retail_timeout_seconds: float = 0.6
 
     redis_url: str = "redis://localhost:6379"
     catalog_url: str = "http://localhost:8082"

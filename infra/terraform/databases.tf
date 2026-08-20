@@ -1,457 +1,325 @@
 # ============================================================================
-#  طبقة البيانات: Aurora PostgreSQL · DocumentDB · ElastiCache · DynamoDB
-#  كلها في الشبكات المعزولة (data subnets) بلا مسار خروج للإنترنت.
+#  طبقة البيانات
+#
+#  قاعدة بيانات لكل خدمة. نسخة Cloud SQL واحدة تستضيف أربع قواعد منفصلة بدل
+#  أربع نسخ: عزل منطقي كامل (لا خدمة تصل لقاعدة أخرى بفضل صلاحيات المستخدم)
+#  بتكلفة نسخة واحدة. الترقية لنسخ منفصلة لاحقًا لا تغيّر سطرًا في التطبيق —
+#  المتغيّر البيئي وحده يتبدّل.
 # ============================================================================
 
-resource "aws_db_subnet_group" "main" {
-  name       = "${local.name}-db"
-  subnet_ids = aws_subnet.data[*].id
-  tags       = { Name = "${local.name}-db-subnets" }
-}
+# ----------------------------------------------------------------- Cloud KMS
 
-# ------------------------------------------------------------ security groups
-
-resource "aws_security_group" "aurora" {
-  name        = "${local.name}-aurora"
-  description = "PostgreSQL access from EKS nodes only"
-  vpc_id      = aws_vpc.main.id
-
-  ingress {
-    description     = "PostgreSQL from EKS"
-    from_port       = 5432
-    to_port         = 5432
-    protocol        = "tcp"
-    security_groups = [module.eks.node_security_group_id]
-  }
-
-  tags = { Name = "${local.name}-aurora-sg" }
-}
-
-resource "aws_security_group" "documentdb" {
-  name        = "${local.name}-documentdb"
-  description = "DocumentDB access from EKS nodes only"
-  vpc_id      = aws_vpc.main.id
-
-  ingress {
-    description     = "MongoDB wire protocol from EKS"
-    from_port       = 27017
-    to_port         = 27017
-    protocol        = "tcp"
-    security_groups = [module.eks.node_security_group_id]
-  }
-
-  tags = { Name = "${local.name}-docdb-sg" }
-}
-
-resource "aws_security_group" "redis" {
-  name        = "${local.name}-redis"
-  description = "Redis access from EKS nodes only"
-  vpc_id      = aws_vpc.main.id
-
-  ingress {
-    description     = "Redis from EKS"
-    from_port       = 6379
-    to_port         = 6379
-    protocol        = "tcp"
-    security_groups = [module.eks.node_security_group_id]
-  }
-
-  tags = { Name = "${local.name}-redis-sg" }
-}
-
-# --------------------------------------------------- Aurora PostgreSQL
-
-resource "random_password" "aurora" {
-  length  = 32
-  special = true
-  # هذه المحارف تكسر سلاسل الاتصال أو ترفضها RDS
-  override_special = "!#$%&*()-_=+[]{}<>:?"
-}
-
-resource "aws_secretsmanager_secret" "aurora" {
-  name       = "${local.name}/aurora/master"
-  kms_key_id = aws_kms_key.app.arn
-
-  # في dev نسمح بالحذف الفوري لتفادي تعارض الأسماء عند إعادة الإنشاء
-  recovery_window_in_days = var.environment == "prod" ? 30 : 0
-}
-
-resource "aws_secretsmanager_secret_version" "aurora" {
-  secret_id = aws_secretsmanager_secret.aurora.id
-
-  secret_string = jsonencode({
-    username = "topchoice_admin"
-    password = random_password.aurora.result
-    engine   = "postgres"
-    host     = aws_rds_cluster.main.endpoint
-    reader   = aws_rds_cluster.main.reader_endpoint
-    port     = 5432
-  })
-}
-
-resource "aws_rds_cluster" "main" {
-  cluster_identifier = "${local.name}-aurora"
-  engine             = "aurora-postgresql"
-  engine_version     = "16.4"
-  engine_mode        = "provisioned"
-
-  database_name   = "topchoice"
-  master_username = "topchoice_admin"
-  master_password = random_password.aurora.result
-
-  db_subnet_group_name   = aws_db_subnet_group.main.name
-  vpc_security_group_ids = [aws_security_group.aurora.id]
-
-  storage_encrypted = true
-  kms_key_id        = aws_kms_key.app.arn
-
-  backup_retention_period      = var.aurora_backup_retention_days
-  preferred_backup_window      = "02:00-03:00"
-  preferred_maintenance_window = "sat:03:30-sat:04:30"
-  copy_tags_to_snapshot        = true
-
-  # حماية من الحذف العرضي في الإنتاج
-  deletion_protection       = var.environment == "prod"
-  skip_final_snapshot       = var.environment != "prod"
-  final_snapshot_identifier = var.environment == "prod" ? "${local.name}-final-${formatdate("YYYYMMDDhhmm", timestamp())}" : null
-
-  enabled_cloudwatch_logs_exports = ["postgresql"]
-
-  lifecycle {
-    ignore_changes = [final_snapshot_identifier, master_password]
-  }
-
-  tags = { Name = "${local.name}-aurora" }
-}
-
-resource "aws_rds_cluster_instance" "main" {
-  # الكاتب + النسخ القارئة
-  count = 1 + var.aurora_replica_count
-
-  identifier         = "${local.name}-aurora-${count.index}"
-  cluster_identifier = aws_rds_cluster.main.id
-  instance_class     = var.aurora_instance_class
-  engine             = aws_rds_cluster.main.engine
-  engine_version     = aws_rds_cluster.main.engine_version
-
-  performance_insights_enabled = true
-  monitoring_interval          = 30
-  monitoring_role_arn          = aws_iam_role.rds_monitoring.arn
-
-  # الترقية أولًا للقارئات ثم الكاتب: يقلّل زمن التحويل عند الترقية
-  promotion_tier = count.index
-
-  tags = { Name = "${local.name}-aurora-${count.index}" }
-}
-
-resource "aws_iam_role" "rds_monitoring" {
-  name = "${local.name}-rds-monitoring"
-
-  assume_role_policy = jsonencode({
-    Version = "2012-10-17"
-    Statement = [{
-      Effect    = "Allow"
-      Principal = { Service = "monitoring.rds.amazonaws.com" }
-      Action    = "sts:AssumeRole"
-    }]
-  })
-}
-
-resource "aws_iam_role_policy_attachment" "rds_monitoring" {
-  role       = aws_iam_role.rds_monitoring.name
-  policy_arn = "arn:aws:iam::aws:policy/service-role/AmazonRDSEnhancedMonitoringRole"
+resource "google_kms_key_ring" "main" {
+  name     = local.name
+  location = var.region
 }
 
 /*
- * RDS Proxy ضروري لا اختياري هنا: كل pod يفتح connection pool خاصًا به،
- * فمع 40 pod × 20 اتصالًا نتجاوز حد Aurora بسهولة. الـ Proxy يوحّد التجميع
- * ويتحمّل تحويل الكاتب دون قطع اتصالات التطبيق.
+ * مفتاحان لا واحد: مفتاح etcd يخصّ مستوى التحكّم ويديره GKE، ومفتاح التطبيق
+ * يخصّ بياناتنا. خلطهما يعني أن تدوير أحدهما يمسّ الآخر بلا داع.
  */
-resource "aws_db_proxy" "main" {
-  name                   = "${local.name}-proxy"
-  engine_family          = "POSTGRESQL"
-  role_arn               = aws_iam_role.rds_proxy.arn
-  vpc_subnet_ids         = aws_subnet.data[*].id
-  vpc_security_group_ids = [aws_security_group.aurora.id]
-  require_tls            = true
-  idle_client_timeout    = 1800
+resource "google_kms_crypto_key" "gke_etcd" {
+  name     = "${local.name}-gke-etcd"
+  key_ring = google_kms_key_ring.main.id
+  purpose  = "ENCRYPT_DECRYPT"
 
-  auth {
-    auth_scheme = "SECRETS"
-    iam_auth    = "DISABLED"
-    secret_arn  = aws_secretsmanager_secret.aurora.arn
-  }
-
-  tags = { Name = "${local.name}-rds-proxy" }
-}
-
-resource "aws_db_proxy_default_target_group" "main" {
-  db_proxy_name = aws_db_proxy.main.name
-
-  connection_pool_config {
-    max_connections_percent      = 90
-    max_idle_connections_percent = 50
-    connection_borrow_timeout    = 120
-  }
-}
-
-resource "aws_db_proxy_target" "main" {
-  db_cluster_identifier = aws_rds_cluster.main.id
-  db_proxy_name         = aws_db_proxy.main.name
-  target_group_name     = aws_db_proxy_default_target_group.main.name
-}
-
-resource "aws_iam_role" "rds_proxy" {
-  name = "${local.name}-rds-proxy"
-
-  assume_role_policy = jsonencode({
-    Version = "2012-10-17"
-    Statement = [{
-      Effect    = "Allow"
-      Principal = { Service = "rds.amazonaws.com" }
-      Action    = "sts:AssumeRole"
-    }]
-  })
-}
-
-resource "aws_iam_role_policy" "rds_proxy" {
-  name = "${local.name}-rds-proxy"
-  role = aws_iam_role.rds_proxy.id
-
-  policy = jsonencode({
-    Version = "2012-10-17"
-    Statement = [
-      {
-        Effect   = "Allow"
-        Action   = ["secretsmanager:GetSecretValue"]
-        Resource = aws_secretsmanager_secret.aurora.arn
-      },
-      {
-        Effect   = "Allow"
-        Action   = ["kms:Decrypt"]
-        Resource = aws_kms_key.app.arn
-        Condition = {
-          StringEquals = { "kms:ViaService" = "secretsmanager.${var.aws_region}.amazonaws.com" }
-        }
-      },
-    ]
-  })
-}
-
-# ------------------------------------------------------------- DocumentDB
-
-resource "random_password" "documentdb" {
-  length           = 32
-  special          = true
-  override_special = "!#%*()-_=+[]{}<>:?"
-}
-
-resource "aws_secretsmanager_secret" "documentdb" {
-  name                    = "${local.name}/documentdb/master"
-  kms_key_id              = aws_kms_key.app.arn
-  recovery_window_in_days = var.environment == "prod" ? 30 : 0
-}
-
-resource "aws_secretsmanager_secret_version" "documentdb" {
-  secret_id = aws_secretsmanager_secret.documentdb.id
-
-  secret_string = jsonencode({
-    username = "topchoice_admin"
-    password = random_password.documentdb.result
-    host     = aws_docdb_cluster.main.endpoint
-    reader   = aws_docdb_cluster.main.reader_endpoint
-    port     = 27017
-  })
-}
-
-resource "aws_docdb_subnet_group" "main" {
-  name       = "${local.name}-docdb"
-  subnet_ids = aws_subnet.data[*].id
-}
-
-resource "aws_docdb_cluster_parameter_group" "main" {
-  family = "docdb5.0"
-  name   = "${local.name}-docdb-params"
-
-  # TLS إجباري — لا اتصال بلا تشفير حتى داخل الشبكة الخاصة
-  parameter {
-    name  = "tls"
-    value = "enabled"
-  }
-
-  parameter {
-    name  = "audit_logs"
-    value = "enabled"
-  }
-}
-
-resource "aws_docdb_cluster" "main" {
-  cluster_identifier = "${local.name}-docdb"
-  engine             = "docdb"
-  engine_version     = "5.0.0"
-
-  master_username = "topchoice_admin"
-  master_password = random_password.documentdb.result
-
-  db_subnet_group_name            = aws_docdb_subnet_group.main.name
-  vpc_security_group_ids          = [aws_security_group.documentdb.id]
-  db_cluster_parameter_group_name = aws_docdb_cluster_parameter_group.main.name
-
-  storage_encrypted = true
-  kms_key_id        = aws_kms_key.app.arn
-
-  backup_retention_period      = var.aurora_backup_retention_days
-  preferred_backup_window      = "02:00-03:00"
-  preferred_maintenance_window = "sun:03:30-sun:04:30"
-
-  deletion_protection = var.environment == "prod"
-  skip_final_snapshot = var.environment != "prod"
-
-  enabled_cloudwatch_logs_exports = ["audit", "profiler"]
+  # ٩٠ يومًا: توازن بين تقليل نافذة الانكشاف وتكلفة الاحتفاظ بالإصدارات القديمة
+  rotation_period = "7776000s"
 
   lifecycle {
-    ignore_changes = [master_password]
-  }
-
-  tags = { Name = "${local.name}-docdb" }
-}
-
-resource "aws_docdb_cluster_instance" "main" {
-  count = var.documentdb_instance_count
-
-  identifier         = "${local.name}-docdb-${count.index}"
-  cluster_identifier = aws_docdb_cluster.main.id
-  instance_class     = var.documentdb_instance_class
-
-  tags = { Name = "${local.name}-docdb-${count.index}" }
-}
-
-# --------------------------------------------------- ElastiCache for Redis
-
-resource "aws_elasticache_subnet_group" "main" {
-  name       = "${local.name}-redis"
-  subnet_ids = aws_subnet.data[*].id
-}
-
-resource "random_password" "redis_auth" {
-  length  = 48
-  special = false # AUTH token في Redis لا يقبل كل المحارف الخاصة
-}
-
-resource "aws_secretsmanager_secret" "redis" {
-  name                    = "${local.name}/redis/auth"
-  kms_key_id              = aws_kms_key.app.arn
-  recovery_window_in_days = var.environment == "prod" ? 30 : 0
-}
-
-resource "aws_secretsmanager_secret_version" "redis" {
-  secret_id = aws_secretsmanager_secret.redis.id
-
-  secret_string = jsonencode({
-    auth_token = random_password.redis_auth.result
-    host       = aws_elasticache_replication_group.main.configuration_endpoint_address
-    port       = 6379
-  })
-}
-
-resource "aws_elasticache_parameter_group" "main" {
-  family = "redis7"
-  name   = "${local.name}-redis-params"
-
-  # الكاش يجب أن يطرد الأقدم لا أن يرفض الكتابة عند الامتلاء
-  parameter {
-    name  = "maxmemory-policy"
-    value = "allkeys-lru"
+    prevent_destroy = true
   }
 }
 
-resource "aws_elasticache_replication_group" "main" {
-  replication_group_id = "${local.name}-redis"
-  description          = "Cart, sessions, cache and rate limiting for ${local.name}"
-
-  engine         = "redis"
-  engine_version = "7.1"
-  node_type      = var.redis_node_type
-  port           = 6379
-
-  # cluster mode: التقسيم يسمح بالتوسع الأفقي بلا توقف
-  num_node_groups         = var.redis_shards
-  replicas_per_node_group = var.redis_replicas_per_shard
-
-  automatic_failover_enabled = true
-  multi_az_enabled           = true
-
-  subnet_group_name    = aws_elasticache_subnet_group.main.name
-  security_group_ids   = [aws_security_group.redis.id]
-  parameter_group_name = aws_elasticache_parameter_group.main.name
-
-  at_rest_encryption_enabled = true
-  kms_key_id                 = aws_kms_key.app.arn
-  transit_encryption_enabled = true
-  auth_token                 = random_password.redis_auth.result
-
-  snapshot_retention_limit = var.environment == "prod" ? 7 : 1
-  snapshot_window          = "01:00-02:00"
-  maintenance_window       = "sun:02:30-sun:03:30"
-
-  apply_immediately = var.environment != "prod"
+resource "google_kms_crypto_key" "app" {
+  name            = "${local.name}-app"
+  key_ring        = google_kms_key_ring.main.id
+  purpose         = "ENCRYPT_DECRYPT"
+  rotation_period = "7776000s"
 
   lifecycle {
-    ignore_changes = [auth_token]
+    prevent_destroy = true
   }
-
-  tags = { Name = "${local.name}-redis" }
 }
 
-# ---------------------------------------------------------------- DynamoDB
-
-resource "aws_dynamodb_table" "idempotency" {
-  name         = "${local.name}-idempotency"
-  billing_mode = "PAY_PER_REQUEST"
-  hash_key     = "key"
-
-  attribute {
-    name = "key"
-    type = "S"
-  }
-
-  # الحذف التلقائي مجاني — لا نحتاج مهمة تنظيف
-  ttl {
-    attribute_name = "expiresAt"
-    enabled        = true
-  }
-
-  server_side_encryption {
-    enabled     = true
-    kms_key_arn = aws_kms_key.app.arn
-  }
-
-  point_in_time_recovery {
-    enabled = var.environment == "prod"
-  }
-
-  tags = { Name = "${local.name}-idempotency" }
+# وكيل خدمة GKE يحتاج فك تشفير مفتاح etcd وإلا فشل إنشاء العنقود بخطأ غامض
+resource "google_kms_crypto_key_iam_member" "gke_etcd" {
+  crypto_key_id = google_kms_crypto_key.gke_etcd.id
+  role          = "roles/cloudkms.cryptoKeyEncrypterDecrypter"
+  member        = "serviceAccount:service-${data.google_project.current.number}@container-engine-robot.iam.gserviceaccount.com"
 }
 
-resource "aws_dynamodb_table" "sessions" {
-  name         = "${local.name}-sessions"
-  billing_mode = "PAY_PER_REQUEST"
-  hash_key     = "sid"
+# --------------------------------------------------------- Cloud SQL PostgreSQL
 
-  attribute {
-    name = "sid"
-    type = "S"
+resource "random_password" "postgres" {
+  length  = 32
+  special = true
+
+  # هذه الرموز تكسر سلاسل الاتصال ومتغيّرات البيئة في الصدفة
+  override_special = "!#%*_-+="
+}
+
+resource "google_sql_database_instance" "postgres" {
+  name             = "${local.name}-pg"
+  database_version = "POSTGRES_16"
+  region           = var.region
+
+  deletion_protection = var.cloudsql_deletion_protection
+
+  settings {
+    tier              = var.cloudsql_tier
+    availability_type = var.cloudsql_availability_type
+    disk_type         = "PD_SSD"
+    disk_size         = var.cloudsql_disk_size_gb
+
+    /*
+     * التوسيع التلقائي للقرص: امتلاء قرص قاعدة البيانات يوقف الكتابة فورًا،
+     * وهو أسوأ أنواع الأعطال لأنه يحدث ليلًا وبلا إنذار مبكر.
+     */
+    disk_autoresize       = true
+    disk_autoresize_limit = var.cloudsql_disk_size_gb * 4
+
+    edition = var.cloudsql_availability_type == "REGIONAL" ? "ENTERPRISE_PLUS" : "ENTERPRISE"
+
+    ip_configuration {
+      # لا عنوان عام إطلاقًا — الوصول عبر الشبكة الخاصة فقط
+      ipv4_enabled                                  = false
+      private_network                               = google_compute_network.vpc.id
+      enable_private_path_for_google_cloud_services = true
+      ssl_mode                                      = "ENCRYPTED_ONLY"
+    }
+
+    backup_configuration {
+      enabled                        = true
+      start_time                     = "01:00"
+      point_in_time_recovery_enabled = true
+      transaction_log_retention_days = 7
+
+      backup_retention_settings {
+        retained_backups = var.cloudsql_backup_retention_days
+        retention_unit   = "COUNT"
+      }
+    }
+
+    maintenance_window {
+      day          = 3
+      hour         = 2
+      update_track = "stable"
+    }
+
+    insights_config {
+      query_insights_enabled  = true
+      query_string_length     = 1024
+      record_application_tags = true
+      record_client_address   = false
+    }
+
+    database_flags {
+      name  = "max_connections"
+      value = "500"
+    }
+
+    /*
+     * تسجيل الاستعلامات الأبطأ من ثانية. القيمة 0 تسجّل كل شيء وتُغرق السجلات
+     * وتكلّف أكثر من قاعدة البيانات نفسها.
+     */
+    database_flags {
+      name  = "log_min_duration_statement"
+      value = "1000"
+    }
+
+    user_labels = local.labels
   }
 
-  ttl {
-    attribute_name = "expiresAt"
-    enabled        = true
+  depends_on = [google_service_networking_connection.psa]
+}
+
+resource "google_sql_database" "app" {
+  for_each = toset(local.postgres_databases)
+
+  name     = "${var.project_name}_${each.value}"
+  instance = google_sql_database_instance.postgres.name
+}
+
+resource "google_sql_user" "app" {
+  name     = var.project_name
+  instance = google_sql_database_instance.postgres.name
+  password = random_password.postgres.result
+}
+
+/*
+ * النسخة القارئة تحمل تقارير لوحة التحكم بعيدًا عن مسار الشراء: استعلام
+ * تجميعي ثقيل على الطلبات يجب ألّا يبطّئ إتمام طلب جارٍ.
+ */
+resource "google_sql_database_instance" "postgres_replica" {
+  count = var.cloudsql_enable_read_replica ? 1 : 0
+
+  name                 = "${local.name}-pg-ro"
+  database_version     = "POSTGRES_16"
+  region               = var.region
+  master_instance_name = google_sql_database_instance.postgres.name
+
+  deletion_protection = false
+
+  replica_configuration {
+    failover_target = false
   }
 
-  server_side_encryption {
-    enabled     = true
-    kms_key_arn = aws_kms_key.app.arn
+  settings {
+    tier              = var.cloudsql_tier
+    availability_type = "ZONAL"
+    disk_type         = "PD_SSD"
+    edition           = google_sql_database_instance.postgres.settings[0].edition
+
+    ip_configuration {
+      ipv4_enabled    = false
+      private_network = google_compute_network.vpc.id
+      ssl_mode        = "ENCRYPTED_ONLY"
+    }
+
+    user_labels = local.labels
+  }
+}
+
+# ------------------------------------------------------------- Memorystore
+
+/*
+ * Redis Cluster لا Redis العادي: السلة والكاش وحدود المعدّل تنمو مع عدد
+ * المستخدمين لا مع حجم الكتالوج، والنسخة الواحدة تصطدم بسقف ذاكرة العقدة.
+ * التوزيع على أجزاء يجعل التوسع أفقيًا.
+ */
+resource "google_redis_cluster" "main" {
+  provider = google-beta
+
+  name        = "${local.name}-redis"
+  region      = var.region
+  shard_count = var.redis_shard_count
+
+  replica_count               = var.redis_replica_count
+  node_type                   = "REDIS_SHARED_CORE_NANO"
+  transit_encryption_mode     = "TRANSIT_ENCRYPTION_MODE_SERVER_AUTHENTICATION"
+  authorization_mode          = "AUTH_MODE_IAM_AUTH"
+  deletion_protection_enabled = var.environment == "prod"
+
+  psc_configs {
+    network = google_compute_network.vpc.id
   }
 
-  tags = { Name = "${local.name}-sessions" }
+  redis_configs = {
+    # الكاش يجب أن يُخلي أقدم المفاتيح لا أن يرفض الكتابة عند الامتلاء
+    maxmemory-policy = "allkeys-lru"
+  }
+
+  depends_on = [google_service_networking_connection.psa]
+}
+
+# --------------------------------------------------------------- Firestore
+
+/*
+ * بديل DynamoDB. الجلسات ومفاتيح تعطيل التكرار: مفتاح/قيمة مع انتهاء صلاحية،
+ * بلا استعلامات معقّدة. Native mode لا Datastore mode لأن الأول يدعم TTL
+ * أصليًا ولا يحتاج مهمة تنظيف نكتبها ونصونها بأنفسنا.
+ */
+resource "google_firestore_database" "main" {
+  name        = "(default)"
+  location_id = var.region
+  type        = "FIRESTORE_NATIVE"
+
+  concurrency_mode                  = "OPTIMISTIC"
+  app_engine_integration_mode       = "DISABLED"
+  point_in_time_recovery_enablement = "POINT_IN_TIME_RECOVERY_ENABLED"
+  delete_protection_state           = var.environment == "prod" ? "DELETE_PROTECTION_ENABLED" : "DELETE_PROTECTION_DISABLED"
+}
+
+resource "google_firestore_field" "sessions_ttl" {
+  database   = google_firestore_database.main.name
+  collection = "sessions"
+  field      = "expiresAt"
+
+  ttl_config {}
+}
+
+resource "google_firestore_field" "idempotency_ttl" {
+  database   = google_firestore_database.main.name
+  collection = "idempotency"
+  field      = "expiresAt"
+
+  ttl_config {}
+}
+
+# ---------------------------------------------------------------- الأسرار
+
+resource "google_secret_manager_secret" "postgres_password" {
+  secret_id = "${local.name}-postgres-password"
+
+  replication {
+    user_managed {
+      replicas {
+        location = var.region
+      }
+    }
+  }
+}
+
+resource "google_secret_manager_secret_version" "postgres_password" {
+  secret      = google_secret_manager_secret.postgres_password.id
+  secret_data = random_password.postgres.result
+}
+
+/*
+ * سلسلة اتصال MongoDB Atlas. Terraform لا يُنشئ عنقود Atlas — إضافة مزوّد
+ * طرف ثالث لهذا وحده ثمن أعلى من قيمته. نُنشئ السر فارغًا ويُملأ بعد إنشاء
+ * العنقود، والخطوات في docs/06-deployment-gke.md.
+ */
+resource "google_secret_manager_secret" "mongodb_uri" {
+  secret_id = "${local.name}-mongodb-uri"
+
+  replication {
+    user_managed {
+      replicas {
+        location = var.region
+      }
+    }
+  }
+}
+
+resource "google_secret_manager_secret" "jwt" {
+  secret_id = "${local.name}-jwt-secret"
+
+  replication {
+    user_managed {
+      replicas {
+        location = var.region
+      }
+    }
+  }
+}
+
+resource "random_password" "jwt" {
+  length  = 64
+  special = false
+}
+
+resource "google_secret_manager_secret_version" "jwt" {
+  secret      = google_secret_manager_secret.jwt.id
+  secret_data = random_password.jwt.result
+}
+
+# الخدمات التي تقرأ الأسرار عبر External Secrets Operator
+resource "google_secret_manager_secret_iam_member" "accessors" {
+  for_each = {
+    for pair in setproduct(
+      ["postgres_password", "mongodb_uri", "jwt"],
+      keys(local.workload_identity_services)
+    ) : "${pair[0]}.${pair[1]}" => { secret = pair[0], service = pair[1] }
+  }
+
+  secret_id = {
+    postgres_password = google_secret_manager_secret.postgres_password.id
+    mongodb_uri       = google_secret_manager_secret.mongodb_uri.id
+    jwt               = google_secret_manager_secret.jwt.id
+  }[each.value.secret]
+
+  role   = "roles/secretmanager.secretAccessor"
+  member = "serviceAccount:${google_service_account.workload[each.value.service].email}"
 }

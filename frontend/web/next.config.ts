@@ -10,9 +10,9 @@ const nextConfig: NextConfig = {
   compress: true,
 
   images: {
-    // في الإنتاج: نطاق CloudFront
+    // في الإنتاج: نطاق Cloud CDN
     remotePatterns: [
-      { protocol: 'https', hostname: '**.cloudfront.net' },
+      { protocol: 'https', hostname: 'storage.googleapis.com' },
       { protocol: 'https', hostname: 'images.unsplash.com' },
       { protocol: 'http', hostname: 'localhost' },
     ],
@@ -39,7 +39,7 @@ const nextConfig: NextConfig = {
         ],
       },
       {
-        // الأصول ذات البصمة غير قابلة للتغيير ⇒ تُخزَّن للأبد على CloudFront
+        // الأصول ذات البصمة غير قابلة للتغيير ⇒ تُخزَّن للأبد على Cloud CDN
         source: '/_next/static/:path*',
         headers: [
           { key: 'Cache-Control', value: 'public, max-age=31536000, immutable' },

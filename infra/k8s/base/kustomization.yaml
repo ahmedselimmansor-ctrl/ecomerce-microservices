@@ -25,9 +25,14 @@ resources:
   - 18-recommendation-service.yaml
   - 19-notification-service.yaml
   - 20-web.yaml
+  - 30-opensearch.yaml
   - 50-ingress.yaml
   - 60-networkpolicy.yaml
 
+# الأساس يحمل الوسم فقط بلا مستودع: مفتاح المطابقة يبقى `topchoice/<خدمة>`
+# فيظل `kustomize edit set image topchoice/<خدمة>=…` في خط الـ CI صالحًا،
+# ويبقى الأساس قابلًا للبناء محليًا بلا Artifact Registry.
+# اسم مستودع Artifact Registry يُضاف في الـ overlay.
 images:
   - name: topchoice/api-gateway
     newTag: dev

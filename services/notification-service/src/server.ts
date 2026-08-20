@@ -2,7 +2,7 @@ import Fastify from 'fastify';
 import { Kafka, logLevel, type Consumer, type EachMessagePayload } from 'kafkajs';
 import { z } from 'zod';
 import { templates } from './templates.js';
-import { AwsSender, LocalSender, type Sender } from './senders.js';
+import { GcpSender, LocalSender, type Sender } from './senders.js';
 
 const PORT = Number(process.env.PORT ?? 8089);
 const HOST = process.env.HOST ?? '0.0.0.0';
@@ -35,10 +35,11 @@ const sender: Sender = process.env.SMTP_HOST
       Number(process.env.SMTP_PORT ?? 1025),
       process.env.MAIL_FROM ?? 'noreply@topchoice.local',
     )
-  : new AwsSender(
-      process.env.AWS_REGION ?? 'me-south-1',
+  : new GcpSender(
+      process.env.GCP_PROJECT_ID,
       process.env.MAIL_FROM ?? 'noreply@topchoice.example',
-      process.env.AWS_ENDPOINT_URL,
+      process.env.SENDGRID_API_KEY,
+      process.env.PUBSUB_SMS_TOPIC,
     );
 
 app.log.info(`notification sender: ${sender.name}`);

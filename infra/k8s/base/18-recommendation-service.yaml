@@ -62,16 +62,22 @@ spec:
           env:
             - name: LOG_LEVEL
               valueFrom: { configMapKeyRef: { name: topchoice-config, key: LOG_LEVEL } }
-            - name: AWS_REGION
-              valueFrom: { configMapKeyRef: { name: topchoice-config, key: AWS_REGION } }
+            - name: GCP_PROJECT_ID
+              valueFrom: { configMapKeyRef: { name: topchoice-config, key: GCP_PROJECT_ID } }
+            - name: GCP_REGION
+              valueFrom: { configMapKeyRef: { name: topchoice-config, key: GCP_REGION } }
             - name: REDIS_URL
               valueFrom: { secretKeyRef: { name: topchoice-database, key: REDIS_URL } }
             - name: CATALOG_URL
               valueFrom: { configMapKeyRef: { name: topchoice-config, key: CATALOG_URL } }
-            - name: PERSONALIZE_CAMPAIGN_USER
-              valueFrom: { secretKeyRef: { name: topchoice-app, key: PERSONALIZE_CAMPAIGN_USER } }
-            - name: PERSONALIZE_TRACKING_ID
-              valueFrom: { secretKeyRef: { name: topchoice-app, key: PERSONALIZE_TRACKING_ID } }
+            # Vertex AI Search for commerce (Retail API): الحملة صارت
+            # servingConfig، ومُعرّف التتبّع صار مفتاح API لبثّ أحداث
+            # المستخدم. الاسمان مختلفان لأن النموذجين مختلفان فعلًا،
+            # لا لمجرد تغيير علامة تجارية.
+            - name: RETAIL_SERVING_CONFIG
+              valueFrom: { secretKeyRef: { name: topchoice-app, key: RETAIL_SERVING_CONFIG } }
+            - name: RETAIL_EVENT_API_KEY
+              valueFrom: { secretKeyRef: { name: topchoice-app, key: RETAIL_EVENT_API_KEY } }
           resources:
             requests:
               cpu: 150m

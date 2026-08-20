@@ -5,7 +5,7 @@ import { apiErrorSchema } from './schemas';
  * عميل HTTP للتعامل مع الـ api-gateway.
  *
  * <p>عنوانان مختلفان بشكل متعمّد: المتصفح ينادي `NEXT_PUBLIC_API_URL`
- * (المرور عبر CloudFront/ALB)، بينما الـ Server Components تنادي
+ * (المرور عبر Cloud CDN وموازن الحمل)، بينما الـ Server Components تنادي
  * `INTERNAL_API_URL` مباشرة داخل الـ VPC — أسرع ولا يخرج للإنترنت.
  */
 const BROWSER_BASE = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8080';

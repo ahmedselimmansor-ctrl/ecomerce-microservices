@@ -10,41 +10,45 @@ resources:
 components:
   - ../../components/keda
 
-# الصور من ECR بوسم إصدار ثابت لا "latest".
+# الصور من Artifact Registry بوسم إصدار ثابت لا "latest".
 # النشر يبدّل الوسم عبر `kustomize edit set image` في خط الـ CI.
+#
+# المستودع إقليمي في me-central1 — نفس إقليم العنقود عمدًا: سحب صورة
+# من إقليم آخر يضيف زمنًا ورسوم نقل على كل توسّع تلقائي، وهو ما يحدث
+# بالضبط في اللحظة التي لا تحتمل تأخيرًا.
 images:
   - name: topchoice/api-gateway
-    newName: ACCOUNT.dkr.ecr.me-south-1.amazonaws.com/topchoice/api-gateway
+    newName: me-central1-docker.pkg.dev/PROJECT_ID/topchoice/api-gateway
     newTag: v1.0.0
   - name: topchoice/identity-service
-    newName: ACCOUNT.dkr.ecr.me-south-1.amazonaws.com/topchoice/identity-service
+    newName: me-central1-docker.pkg.dev/PROJECT_ID/topchoice/identity-service
     newTag: v1.0.0
   - name: topchoice/catalog-service
-    newName: ACCOUNT.dkr.ecr.me-south-1.amazonaws.com/topchoice/catalog-service
+    newName: me-central1-docker.pkg.dev/PROJECT_ID/topchoice/catalog-service
     newTag: v1.0.0
   - name: topchoice/order-service
-    newName: ACCOUNT.dkr.ecr.me-south-1.amazonaws.com/topchoice/order-service
+    newName: me-central1-docker.pkg.dev/PROJECT_ID/topchoice/order-service
     newTag: v1.0.0
   - name: topchoice/payment-service
-    newName: ACCOUNT.dkr.ecr.me-south-1.amazonaws.com/topchoice/payment-service
+    newName: me-central1-docker.pkg.dev/PROJECT_ID/topchoice/payment-service
     newTag: v1.0.0
   - name: topchoice/inventory-service
-    newName: ACCOUNT.dkr.ecr.me-south-1.amazonaws.com/topchoice/inventory-service
+    newName: me-central1-docker.pkg.dev/PROJECT_ID/topchoice/inventory-service
     newTag: v1.0.0
   - name: topchoice/cart-service
-    newName: ACCOUNT.dkr.ecr.me-south-1.amazonaws.com/topchoice/cart-service
+    newName: me-central1-docker.pkg.dev/PROJECT_ID/topchoice/cart-service
     newTag: v1.0.0
   - name: topchoice/search-service
-    newName: ACCOUNT.dkr.ecr.me-south-1.amazonaws.com/topchoice/search-service
+    newName: me-central1-docker.pkg.dev/PROJECT_ID/topchoice/search-service
     newTag: v1.0.0
   - name: topchoice/recommendation-service
-    newName: ACCOUNT.dkr.ecr.me-south-1.amazonaws.com/topchoice/recommendation-service
+    newName: me-central1-docker.pkg.dev/PROJECT_ID/topchoice/recommendation-service
     newTag: v1.0.0
   - name: topchoice/notification-service
-    newName: ACCOUNT.dkr.ecr.me-south-1.amazonaws.com/topchoice/notification-service
+    newName: me-central1-docker.pkg.dev/PROJECT_ID/topchoice/notification-service
     newTag: v1.0.0
   - name: topchoice/web
-    newName: ACCOUNT.dkr.ecr.me-south-1.amazonaws.com/topchoice/web
+    newName: me-central1-docker.pkg.dev/PROJECT_ID/topchoice/web
     newTag: v1.0.0
 
 patches:
@@ -92,3 +96,21 @@ patches:
       - op: replace
         path: /data/DB_POOL_MAX
         value: "20"
+
+  # الموارد السحابية المسمّاة تحمل لاحقة البيئة، والأساس مضبوط على dev.
+  # لا مفر من الترقيع هنا: العنوان الثابت وسياسة Cloud Armor موردان
+  # في GCP لا في العنقود، ويشير إليهما الـ Ingress بالاسم فقط.
+  - target:
+      kind: Ingress
+      name: topchoice
+    patch: |-
+      - op: replace
+        path: /metadata/annotations/kubernetes.io~1ingress.global-static-ip-name
+        value: topchoice-prod-ingress-ip
+
+  - target:
+      kind: BackendConfig
+    patch: |-
+      - op: replace
+        path: /spec/securityPolicy/name
+        value: topchoice-prod-armor

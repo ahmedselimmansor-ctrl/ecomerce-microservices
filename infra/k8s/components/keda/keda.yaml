@@ -6,15 +6,26 @@
 #  الصحيح هو consumer lag: كم رسالة تنتظر المعالجة.
 # ============================================================================
 
+# الاستثناء الوحيد في هذا المستودع عن قاعدة "بلا مفاتيح ثابتة":
+# Managed Service for Apache Kafka تُصادَق بتوكن OAuth من Google، وسكالر
+# Kafka في KEDA لا يملك مسار Workload Identity — فهو يعمل خارج pods
+# التطبيق ولا يرث هوية أيٍّ منها. لذلك نزامن بيانات اعتماد OAuth من
+# Secret Manager بدل الاعتماد على الهوية المرتبطة بالـ KSA.
+# البديل — سكالر خارجي يجلب التوكن من خادم البيانات الوصفية بنفسه —
+# مكوّن كامل نكتبه ونصونه لأجل قراءة رقم تأخّر واحد.
 apiVersion: keda.sh/v1alpha1
 kind: TriggerAuthentication
 metadata:
-  name: msk-iam
+  name: managed-kafka-oauth
   namespace: topchoice
 spec:
-  podIdentity:
-    provider: aws
-    identityOwner: workload
+  secretTargetRef:
+    - parameter: oauthClientID
+      name: topchoice-kafka-oauth
+      key: clientID
+    - parameter: oauthClientSecret
+      name: topchoice-kafka-oauth
+      key: clientSecret
 ---
 apiVersion: keda.sh/v1alpha1
 kind: ScaledObject
@@ -31,16 +42,18 @@ spec:
   triggers:
     - type: kafka
       metadata:
-        bootstrapServers: REPLACE_WITH_MSK_BOOTSTRAP
+        bootstrapServers: REPLACE_WITH_KAFKA_BOOTSTRAP
         consumerGroup: notification-service
         topic: notification.commands.v1
         # نسخة إضافية لكل 500 رسالة متأخرة
         lagThreshold: "500"
         offsetResetPolicy: latest
-        sasl: aws_msk_iam
+        sasl: oauthbearer
         tls: enable
+        oauthTokenEndpointUri: https://oauth2.googleapis.com/token
+        scopes: https://www.googleapis.com/auth/cloud-platform
       authenticationRef:
-        name: msk-iam
+        name: managed-kafka-oauth
 ---
 apiVersion: keda.sh/v1alpha1
 kind: ScaledObject
@@ -58,14 +71,16 @@ spec:
     # مزيج مقصود: الفهرسة تتبع تأخّر Kafka، والبحث يتبع الـ CPU
     - type: kafka
       metadata:
-        bootstrapServers: REPLACE_WITH_MSK_BOOTSTRAP
+        bootstrapServers: REPLACE_WITH_KAFKA_BOOTSTRAP
         consumerGroup: search-service
         topic: catalog.product.v1
         lagThreshold: "1000"
-        sasl: aws_msk_iam
+        sasl: oauthbearer
         tls: enable
+        oauthTokenEndpointUri: https://oauth2.googleapis.com/token
+        scopes: https://www.googleapis.com/auth/cloud-platform
       authenticationRef:
-        name: msk-iam
+        name: managed-kafka-oauth
     - type: cpu
       metricType: Utilization
       metadata:

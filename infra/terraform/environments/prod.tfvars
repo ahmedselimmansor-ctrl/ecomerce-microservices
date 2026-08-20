@@ -1,46 +1,56 @@
 # ============================================================================
-#  بيئة الإنتاج — مُحسَّنة للتوفر والأداء
+#  prod — التوفّر أولًا
+#
+#  كل فرق عن dev هنا مقصود ومدفوع الثمن: توفّر إقليمي، نسخة قارئة، حماية
+#  الحافة، ومنع الحذف. لا شيء «مفعّل احتياطًا» — كل بند يقابل عطلًا محددًا
+#  يمنعه.
 # ============================================================================
 
+project_id  = "topchoice-prod"
 environment = "prod"
-aws_region  = "me-south-1"
-owner       = "platform-team"
+region      = "me-central1"
 
-# NAT لكل نطاق توفر: سقوط نطاق لا يقطع الخروج عن البقية
-single_nat_gateway = false
-az_count           = 3
+# ------------------------------------------------------------------- شبكة
+subnet_cidr   = "10.16.0.0/20"
+pods_cidr     = "10.20.0.0/16"
+services_cidr = "10.24.0.0/20"
+master_cidr   = "172.16.1.0/28"
 
-# ---------------------------------------------------------------------- eks
-kubernetes_version  = "1.31"
-node_instance_types = ["m7g.large", "m7g.xlarge", "c7g.large", "c7g.xlarge", "r7g.large"]
-node_desired_size   = 6
-node_min_size       = 4
-node_max_size       = 40
-enable_spot         = true
+# --------------------------------------------------------------------- gke
+gke_release_channel           = "REGULAR" # الاستقرار يسبق الحداثة هنا
+node_machine_type             = "t2a-standard-4"
+node_count                    = 2 # لكل منطقة فرعية → ٦ عقد
+node_min_count                = 2
+node_max_count                = 12
+node_disk_size_gb             = 100
+enable_spot                   = true # للأحمال عديمة الحالة فقط — الوسم يفرض ذلك
+enable_node_auto_provisioning = true
+nap_max_cpu                   = 128
+nap_max_memory_gb             = 512
 
-# ---------------------------------------------------------------- databases
-aurora_instance_class        = "db.r6g.large"
-aurora_replica_count         = 2
-aurora_backup_retention_days = 35
+# --------------------------------------------------------------- قواعد بيانات
+cloudsql_tier                  = "db-custom-4-15360"
+cloudsql_availability_type     = "REGIONAL" # تجاوز فشل تلقائي لمنطقة أخرى
+cloudsql_disk_size_gb          = 100
+cloudsql_backup_retention_days = 30
+cloudsql_enable_read_replica   = true
+cloudsql_deletion_protection   = true
 
-documentdb_instance_class = "db.r6g.large"
-documentdb_instance_count = 3
+redis_shard_count   = 3
+redis_replica_count = 1
 
-redis_node_type          = "cache.r7g.large"
-redis_shards             = 3
-redis_replicas_per_shard = 1
+# ------------------------------------------------------------------- kafka
+kafka_vcpu_count         = 6
+kafka_memory_gb          = 24
+kafka_partitions         = 12 # سقف التوازي — لا يمكن تقليصه لاحقًا
+kafka_replication_factor = 3
 
-# -------------------------------------------------------------------- kafka
-msk_broker_instance_type = "kafka.m7g.large"
-msk_broker_count         = 3
-msk_volume_size_gb       = 500
+# -------------------------------------------------------------- opensearch
+opensearch_node_count   = 3
+opensearch_disk_size_gb = 200
 
-# --------------------------------------------------------------- opensearch
-opensearch_instance_type  = "r6g.large.search"
-opensearch_instance_count = 3
-
-# ------------------------------------------------------------------- other
-# ضع نطاقك الحقيقي هنا لتفعيل Route 53 و ACM
+# -------------------------------------------------------------------- أخرى
 domain_name        = ""
-enable_waf         = true
-enable_personalize = true
+enable_cloud_armor = true
+enable_retail_ai   = true
+cdn_default_ttl    = 3600

@@ -49,8 +49,8 @@ const layout = (title: string, body: string): string => `<!doctype html>
 /**
  * قوالب الرسائل.
  *
- * <p>محليًا نرسم HTML هنا. في الإنتاج على AWS تُستبدل بـ
- * <b>SES Templates</b> فيمكن لفريق التسويق تعديل النصوص دون نشر كود.
+ * <p>محليًا نرسم HTML هنا. في الإنتاج تُستبدل بقوالب SendGrid الديناميكية،
+ * فيمكن لفريق التسويق تعديل النصوص دون نشر كود.
  */
 export const templates: Record<string, (data: TemplateData) => RenderedMessage> = {
   order_confirmed: (data) => {

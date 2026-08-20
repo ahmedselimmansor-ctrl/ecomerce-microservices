@@ -30,6 +30,48 @@ replicas:
     count: 1
   - name: web
     count: 1
+  # OpenSearch بعقدة واحدة: نصاب من واحد صالح تمامًا للتحقق،
+  # وثلاث عُقد بقرص SSD لكل منها فاتورة بلا مقابل في dev
+  - name: opensearch
+    count: 1
+
+# نفس مستودع Artifact Registry الذي يستخدمه الإنتاج، بوسم dev.
+# مفتاح المطابقة يبقى `topchoice/<خدمة>` كما في الأساس ليعمل
+# `kustomize edit set image` في خط الـ CI دون تعديل.
+images:
+  - name: topchoice/api-gateway
+    newName: me-central1-docker.pkg.dev/PROJECT_ID/topchoice/api-gateway
+    newTag: dev
+  - name: topchoice/identity-service
+    newName: me-central1-docker.pkg.dev/PROJECT_ID/topchoice/identity-service
+    newTag: dev
+  - name: topchoice/catalog-service
+    newName: me-central1-docker.pkg.dev/PROJECT_ID/topchoice/catalog-service
+    newTag: dev
+  - name: topchoice/order-service
+    newName: me-central1-docker.pkg.dev/PROJECT_ID/topchoice/order-service
+    newTag: dev
+  - name: topchoice/payment-service
+    newName: me-central1-docker.pkg.dev/PROJECT_ID/topchoice/payment-service
+    newTag: dev
+  - name: topchoice/inventory-service
+    newName: me-central1-docker.pkg.dev/PROJECT_ID/topchoice/inventory-service
+    newTag: dev
+  - name: topchoice/cart-service
+    newName: me-central1-docker.pkg.dev/PROJECT_ID/topchoice/cart-service
+    newTag: dev
+  - name: topchoice/search-service
+    newName: me-central1-docker.pkg.dev/PROJECT_ID/topchoice/search-service
+    newTag: dev
+  - name: topchoice/recommendation-service
+    newName: me-central1-docker.pkg.dev/PROJECT_ID/topchoice/recommendation-service
+    newTag: dev
+  - name: topchoice/notification-service
+    newName: me-central1-docker.pkg.dev/PROJECT_ID/topchoice/notification-service
+    newTag: dev
+  - name: topchoice/web
+    newName: me-central1-docker.pkg.dev/PROJECT_ID/topchoice/web
+    newTag: dev
 
 patches:
   # موارد أقل بكثير: عقدة واحدة تكفي لكل شيء
@@ -70,6 +112,32 @@ patches:
     patch: |-
       - op: remove
         path: /spec/template/spec/nodeSelector
+
+  # OpenSearch بأصغر كومة تُقلع فعلًا. لا نلمس `node.store.allow_mmap`
+  # ولا قائمة تشكيل العنقود: الأساس مضبوط ليعمل بعقدة واحدة أصلًا.
+  - target:
+      kind: StatefulSet
+      name: opensearch
+    patch: |-
+      apiVersion: apps/v1
+      kind: StatefulSet
+      metadata:
+        name: opensearch
+      spec:
+        template:
+          spec:
+            containers:
+              - name: opensearch
+                env:
+                  - name: OPENSEARCH_JAVA_OPTS
+                    value: "-Xms512m -Xmx512m"
+                resources:
+                  requests:
+                    cpu: 100m
+                    memory: 1Gi
+                  limits:
+                    cpu: "1"
+                    memory: 1536Mi
 
   # الـ ConfigMap مورد عادي في الأساس لا generator، فنعدّله بترقيع
   # لا بـ configMapGenerator (الذي يدمج المولّدات فقط)

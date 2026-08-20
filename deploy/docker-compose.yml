@@ -2,11 +2,15 @@
 #  TopChoice Clone — full local stack
 #  make up
 #
-#  كل حاوية هنا لها مقابل مُدار على AWS (انظر docs/02-aws-services.md):
-#    postgres  → Amazon Aurora PostgreSQL      mongo      → Amazon DocumentDB
-#    redis     → Amazon ElastiCache            kafka      → Amazon MSK
-#    opensearch→ Amazon OpenSearch Service     localstack → S3/SNS/SQS/Secrets
-#    mailpit   → Amazon SES
+#  كل حاوية هنا لها مقابل مُدار على Google Cloud (انظر docs/02-gcp-services.md):
+#    postgres  → Cloud SQL for PostgreSQL      mongo      → MongoDB Atlas on GCP
+#    redis     → Memorystore for Redis Cluster kafka      → Managed Service for Apache Kafka
+#    opensearch→ OpenSearch مُدار ذاتيًا على GKE  mailpit    → SendGrid
+#    pubsub-emulator   → Pub/Sub               fake-gcs   → Cloud Storage
+#    firestore-emulator→ Firestore (Native)
+#
+#  لا يوجد محاكي لـ Secret Manager ولا لـ Retail API: الأول نغنيه بـ .env
+#  محليًا، والثاني تسقط الخدمة تلقائيًا إلى محرّكها الاحتياطي حين لا يُضبط.
 # ============================================================================
 
 name: topchoice
@@ -85,7 +89,8 @@ services:
     <<: *common
     image: apache/kafka:3.8.1
     environment:
-      # وضع KRaft — بلا ZooKeeper، وهو ما تستخدمه MSK الحديثة أيضًا
+      # وضع KRaft — بلا ZooKeeper، وهو ما تعتمده أيضًا
+      # Managed Service for Apache Kafka في السحابة
       KAFKA_NODE_ID: 1
       KAFKA_PROCESS_ROLES: broker,controller
       KAFKA_LISTENERS: PLAINTEXT://:9092,CONTROLLER://:9093,EXTERNAL://:29092
@@ -133,23 +138,86 @@ services:
       retries: 20
       start_period: 30s
 
-  # -------------------------------------------------------- AWS emulation
+  # -------------------------------------------------------- GCP emulation
 
-  localstack:
+  # محاكيا Pub/Sub و Firestore رسميان ويأتيان داخل صورة gcloud نفسها، فنعيد
+  # استخدام الصورة ذاتها مرتين ولا نسحب إلا طبقاتها مرة واحدة.
+  pubsub-emulator:
     <<: *common
-    image: localstack/localstack:3.8
-    environment:
-      SERVICES: s3,sns,sqs,secretsmanager,dynamodb
-      DEBUG: "0"
-      PERSISTENCE: "0"
-    ports: ["4566:4566"]
-    volumes:
-      - ./init/localstack-init.sh:/etc/localstack/init/ready.d/init.sh:ro
+    image: gcr.io/google.com/cloudsdktool/google-cloud-cli:580.0.0-emulators
+    command: >
+      gcloud beta emulators pubsub start
+      --project=${GOOGLE_CLOUD_PROJECT:-topchoice-local}
+      --host-port=0.0.0.0:8681
+    ports: ["8681:8681"]
     healthcheck:
-      test: ["CMD-SHELL", "curl -fsS http://localhost:4566/_localstack/health || exit 1"]
-      interval: 10s
-      timeout: 5s
-      retries: 15
+      # المحاكي لا يعرض مسار صحة؛ فتح المنفذ هو الإشارة الوحيدة الموثوقة،
+      # ونستدعي bash صراحةً لأن /dev/tcp غير موجود في sh الافتراضي.
+      test: ["CMD-SHELL", "bash -c '</dev/tcp/localhost/8681' || exit 1"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+      start_period: 20s
+
+  firestore-emulator:
+    <<: *common
+    image: gcr.io/google.com/cloudsdktool/google-cloud-cli:580.0.0-emulators
+    # المنفذ الافتراضي للمحاكي هو 8080 وهو منفذ الـ api-gateway هنا، فننقله
+    # إلى 8091 بدل تحريك بوابة تعرفها كل السكربتات والاختبارات.
+    command: >
+      gcloud beta emulators firestore start
+      --project=${GOOGLE_CLOUD_PROJECT:-topchoice-local}
+      --host-port=0.0.0.0:8091
+      --database-mode=firestore-native
+    ports: ["8091:8091"]
+    healthcheck:
+      test: ["CMD-SHELL", "bash -c '</dev/tcp/localhost/8091' || exit 1"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+      start_period: 20s
+
+  fake-gcs:
+    <<: *common
+    image: fsouza/fake-gcs-server:1.55.1
+    # http بدل https: شهادة موقّعة ذاتيًا تعني تعطيل التحقق في كل عميل،
+    # وهي عادة سيئة تتسرّب إلى الإنتاج. public-host يجعل روابط التنزيل
+    # التي يولّدها المحاكي صالحة من المتصفح لا من داخل الشبكة فقط.
+    command: >
+      -scheme http
+      -host 0.0.0.0
+      -port 4443
+      -public-host localhost:4443
+      -backend memory
+    ports: ["4443:4443"]
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O - http://localhost:4443/storage/v1/b >/dev/null 2>&1 || exit 1"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  # حاوية تُنشئ الموارد ثم تخرج. صورة curl وحدها تكفي: واجهات المحاكيات
+  # كلها REST، وسحب صورة gcloud كاملة (~3 GB) لأجل بضعة نداءات إسراف.
+  gcp-init:
+    image: curlimages/curl:8.21.0
+    networks: [topchoice]
+    restart: "no"
+    logging:
+      driver: json-file
+      options: { max-size: "10m", max-file: "3" }
+    depends_on:
+      pubsub-emulator: { condition: service_started }
+      firestore-emulator: { condition: service_started }
+      fake-gcs: { condition: service_started }
+    environment:
+      GOOGLE_CLOUD_PROJECT: ${GOOGLE_CLOUD_PROJECT:-topchoice-local}
+      GCS_MEDIA_BUCKET: ${GCS_MEDIA_BUCKET:-topchoice-media-local}
+      PUBSUB_EMULATOR_HOST: pubsub-emulator:8681
+      FIRESTORE_EMULATOR_HOST: firestore-emulator:8091
+      STORAGE_EMULATOR_HOST: http://fake-gcs:4443
+    volumes:
+      - ./init/gcp-emulators-init.sh:/init/gcp-emulators-init.sh:ro
+    entrypoint: ["/bin/sh", "/init/gcp-emulators-init.sh"]
 
   mailpit:
     <<: *common
@@ -290,10 +358,13 @@ services:
     environment:
       REDIS_URL: redis://redis:6379
       CATALOG_URL: http://catalog-service:8082
-      AWS_REGION: ${AWS_REGION:-me-south-1}
-      # فراغ ⇒ يعمل المحرك الاحتياطي المحلي بدل Amazon Personalize
-      PERSONALIZE_CAMPAIGN_USER: ${PERSONALIZE_CAMPAIGN_ARN:-}
-      PERSONALIZE_TRACKING_ID: ${PERSONALIZE_TRACKING_ID:-}
+      GOOGLE_CLOUD_PROJECT: ${GOOGLE_CLOUD_PROJECT:-topchoice-local}
+      GCP_REGION: ${GCP_REGION:-me-central1}
+      RETAIL_CATALOG: ${RETAIL_CATALOG:-default_catalog}
+      # لا محاكي لـ Retail API؛ فراغ ⇒ يعمل المحرك الاحتياطي المحلي
+      RETAIL_SERVING_CONFIG_USER: ${RETAIL_SERVING_CONFIG_USER:-}
+      RETAIL_SERVING_CONFIG_RELATED: ${RETAIL_SERVING_CONFIG_RELATED:-}
+      RETAIL_SERVING_CONFIG_RANKING: ${RETAIL_SERVING_CONFIG_RANKING:-}
       LOG_LEVEL: ${LOG_LEVEL:-INFO}
     ports: ["8088:8088"]
 

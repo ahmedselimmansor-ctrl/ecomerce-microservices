@@ -1,8 +1,19 @@
 # ============================================================================
-#  Ingress عبر AWS Load Balancer Controller.
+#  Ingress عبر GKE Ingress (موازن التحميل العالمي من Google).
 #
-#  ينشئ ALB حقيقيًا في الشبكات العامة ويوجّه إلى الـ pods مباشرة
-#  (target-type: ip) — بلا قفزة NodePort إضافية، فيقلّ زمن الاستجابة.
+#  الموازن عالمي لا إقليمي، وعنوانه IP واحد في anycast: الطلب يدخل شبكة
+#  Google من أقرب نقطة للمستخدم ثم يقطع بقية الطريق داخلها. هذا وحده
+#  يعطينا ما كنا نضع طبقة CDN منفصلة أمام الموازن لأجله.
+#
+#  التوجيه إلى الـ pods مباشرة عبر NEG (container-native load balancing)،
+#  بلا قفزة NodePort إضافية فيقلّ زمن الاستجابة. يُفعَّل تلقائيًا لأن
+#  الخدمات من نوع ClusterIP في عنقود VPC-native.
+#
+#  الإعداد مفكّك إلى موارد مستقلة عمدًا: ManagedCertificate للشهادة،
+#  FrontendConfig للواجهة الأمامية، BackendConfig لكل خدمة خلفية على حدة.
+#  الفائدة أن BackendConfig يُربط بالـ Service لا بالـ Ingress، فتختلف
+#  سياسة الـ gateway عن سياسة الواجهة — أحدهما بلا CDN والآخر به —
+#  دون تكرار الـ Ingress نفسه.
 # ============================================================================
 
 apiVersion: networking.k8s.io/v1
@@ -11,35 +22,18 @@ metadata:
   name: topchoice
   namespace: topchoice
   annotations:
-    kubernetes.io/ingress.class: alb
-    alb.ingress.kubernetes.io/scheme: internet-facing
-    alb.ingress.kubernetes.io/target-type: ip
-    alb.ingress.kubernetes.io/listen-ports: '[{"HTTP":80},{"HTTPS":443}]'
-    alb.ingress.kubernetes.io/ssl-redirect: "443"
-    alb.ingress.kubernetes.io/ssl-policy: ELBSecurityPolicy-TLS13-1-2-2021-06
-    alb.ingress.kubernetes.io/certificate-arn: "REPLACE_WITH_ACM_CERT_ARN"
+    kubernetes.io/ingress.class: "gce"
 
-    # فحص الصحة على مستوى الـ target group
-    alb.ingress.kubernetes.io/healthcheck-path: /health/live
-    alb.ingress.kubernetes.io/healthcheck-interval-seconds: "15"
-    alb.ingress.kubernetes.io/healthy-threshold-count: "2"
-    alb.ingress.kubernetes.io/unhealthy-threshold-count: "3"
+    # عنوان IP عالمي ثابت يُنشأ في Terraform قبل الـ Ingress.
+    # بدونه يمنح الموازن عنوانًا مؤقتًا يتغيّر مع كل إعادة إنشاء،
+    # فينهار سجل Cloud DNS بصمت.
+    kubernetes.io/ingress.global-static-ip-name: "topchoice-dev-ingress-ip"
 
-    # الإلغاء التدريجي: ALB يتوقف عن إرسال طلبات جديدة وينتظر الجارية
-    alb.ingress.kubernetes.io/target-group-attributes: >-
-      deregistration_delay.timeout_seconds=30,
-      load_balancing.algorithm.type=least_outstanding_requests,
-      stickiness.enabled=false
+    # الشهادة يديرها Google: يصدرها ويجدّدها ما دام سجل DNS يشير للعنوان
+    networking.gke.io/managed-certificates: "topchoice-cert"
 
-    alb.ingress.kubernetes.io/load-balancer-attributes: >-
-      idle_timeout.timeout_seconds=60,
-      routing.http2.enabled=true,
-      access_logs.s3.enabled=true,
-      access_logs.s3.bucket=REPLACE_WITH_LOGS_BUCKET,
-      access_logs.s3.prefix=alb
-
-    alb.ingress.kubernetes.io/wafv2-acl-arn: "REPLACE_WITH_WAF_ARN"
-    alb.ingress.kubernetes.io/tags: Project=topchoice-clone,ManagedBy=kubernetes
+    # إعادة التوجيه إلى HTTPS وسياسة TLS
+    networking.gke.io/v1beta1.FrontendConfig: "topchoice-frontend"
 
 spec:
   rules:
@@ -68,3 +62,122 @@ spec:
                 name: web
                 port:
                   number: 3000
+---
+# الشهادة المُدارة. الإصدار يفشل ما لم يكن سجل DNS يشير مسبقًا إلى
+# العنوان الثابت أعلاه — وهذا ترتيب لا يمكن عكسه.
+apiVersion: networking.gke.io/v1
+kind: ManagedCertificate
+metadata:
+  name: topchoice-cert
+  namespace: topchoice
+spec:
+  domains:
+    - REPLACE_WITH_DOMAIN
+    - www.REPLACE_WITH_DOMAIN
+---
+apiVersion: networking.gke.io/v1beta1
+kind: FrontendConfig
+metadata:
+  name: topchoice-frontend
+  namespace: topchoice
+spec:
+  redirectToHttps:
+    enabled: true
+    # 301 لا 302: نريد المتصفحات وحقول SEO أن تحفظ التحويل نهائيًا
+    responseCodeName: MOVED_PERMANENTLY
+  # سياسة TLS تُنشأ في Terraform. الافتراضي في GCP يقبل TLS 1.0،
+  # وهو ما يسقط في تدقيق PCI لبوابة دفع.
+  sslPolicy: topchoice-tls-policy
+---
+# ============================================================================
+#  BackendConfig للـ gateway: بلا CDN إطلاقًا.
+#  تخزين استجابة API مؤقتًا يعني تسريب سلة مستخدم إلى آخر — الخطر أكبر
+#  بكثير من المكسب.
+# ============================================================================
+apiVersion: cloud.google.com/v1
+kind: BackendConfig
+metadata:
+  name: api-gateway
+  namespace: topchoice
+spec:
+  # Cloud Armor يقابل WAF: نفس القواعد المُدارة ونفس تحديد المعدل
+  securityPolicy:
+    name: topchoice-dev-armor
+
+  healthCheck:
+    type: HTTP
+    requestPath: /health/live
+    port: 8080
+    checkIntervalSec: 15
+    timeoutSec: 5
+    healthyThreshold: 2
+    unhealthyThreshold: 3
+
+  # 60 ثانية: أطول من أبطأ نداء نتوقعه عبر البوابة، وأقصر من أن يحتجز
+  # الموازن اتصالًا مات خلفه
+  timeoutSec: 60
+
+  # الإلغاء التدريجي: الموازن يتوقف عن إرسال طلبات جديدة وينتظر الجارية.
+  # 30 ثانية أقصر من terminationGracePeriodSeconds في الـ Deployment عمدًا.
+  connectionDraining:
+    drainingTimeoutSec: 30
+
+  # سجلّات الوصول تذهب إلى Cloud Logging لا إلى دلو تخزين:
+  # الاستعلام فوري بلا خطوة تحميل وتحليل، وهذا ما كان ينقص access_logs.s3
+  logging:
+    enable: true
+    sampleRate: 1.0
+---
+# ============================================================================
+#  BackendConfig للواجهة: هنا الـ CDN مفيد فعلًا.
+#  أصول Next.js الثابتة تُخدَّم من حافة Google، فلا تصل إلى الـ pods أصلًا.
+# ============================================================================
+apiVersion: cloud.google.com/v1
+kind: BackendConfig
+metadata:
+  name: web
+  namespace: topchoice
+spec:
+  securityPolicy:
+    name: topchoice-dev-armor
+
+  cdn:
+    enabled: true
+    # CACHE_ALL_STATIC لا FORCE_CACHE_ALL: صفحات Next.js المُخصّصة
+    # للمستخدم يجب ألّا تُخزَّن، والوضع الأول يحترم رؤوس Cache-Control
+    cachePolicy:
+      includeHost: true
+      includeProtocol: true
+      includeQueryString: true
+    cacheMode: CACHE_ALL_STATIC
+    clientTtl: 3600
+    defaultTtl: 3600
+    maxTtl: 86400
+    # يمنع انهيار الأصل عند انتهاء صلاحية عنصر مطلوب بكثافة:
+    # طلب واحد فقط يمر، والباقي ينتظر النتيجة
+    requestCoalescing: true
+    negativeCaching: true
+    serveWhileStale: 86400
+
+  healthCheck:
+    type: HTTP
+    requestPath: /health/live
+    port: 3000
+    checkIntervalSec: 15
+    timeoutSec: 5
+    healthyThreshold: 2
+    unhealthyThreshold: 3
+
+  timeoutSec: 60
+  connectionDraining:
+    drainingTimeoutSec: 30
+
+  # لا التصاق بالجلسة: الحالة كلها في Memorystore، فأي نسخة تخدم أي مستخدم.
+  # تفعيله هنا كان سيقيّد التوزيع بلا مقابل — نُصرّح به لأن الافتراضي
+  # يختلف بين موازنات GCP ولا نريد الاعتماد على الافتراضي.
+  sessionAffinity:
+    affinityType: "NONE"
+
+  logging:
+    enable: true
+    sampleRate: 1.0

@@ -38,10 +38,12 @@ spec:
         fsGroup: 10001
         seccompProfile:
           type: RuntimeDefault
-      # الخدمات الحرجة على On-Demand فقط: سحب Spot أثناء معالجة طلب
-      # يعني معاملة معلّقة، وهو ثمن لا يستحق التوفير
+      # الخدمات الحرجة على عُقد Standard فقط: سحب Spot أثناء معالجة طلب
+      # يعني معاملة معلّقة، وهو ثمن لا يستحق التوفير.
+      # GKE يضع هذا التصنيف على كل عقدة يوفّرها — بما فيها ما يهبط من
+      # التوفير التلقائي — فلا حاجة لمجموعة عُقد مخصّصة لهذه الخدمات.
       nodeSelector:
-        karpenter.sh/capacity-type: on-demand
+        cloud.google.com/gke-provisioning: standard
       # توزيع النسخ على نطاقات التوفر: سقوط نطاق لا يُسقط الخدمة
       topologySpreadConstraints:
         - maxSkew: 1
@@ -66,8 +68,10 @@ spec:
           env:
             - name: LOG_LEVEL
               valueFrom: { configMapKeyRef: { name: topchoice-config, key: LOG_LEVEL } }
-            - name: AWS_REGION
-              valueFrom: { configMapKeyRef: { name: topchoice-config, key: AWS_REGION } }
+            - name: GCP_PROJECT_ID
+              valueFrom: { configMapKeyRef: { name: topchoice-config, key: GCP_PROJECT_ID } }
+            - name: GCP_REGION
+              valueFrom: { configMapKeyRef: { name: topchoice-config, key: GCP_REGION } }
             - name: POSTGRES_HOST
               valueFrom: { secretKeyRef: { name: topchoice-database, key: POSTGRES_HOST } }
             - name: POSTGRES_USER

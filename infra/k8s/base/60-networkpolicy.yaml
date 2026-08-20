@@ -4,7 +4,7 @@
 #  المبدأ: منع كل شيء افتراضيًا، ثم السماح بالمسارات المعروفة فقط.
 #  هذا ما يجعل نقاط `/internal/` آمنة فعلًا لا مجرد محجوبة عند الـ gateway.
 #
-#  يتطلب CNI يدعم NetworkPolicy (Calico أو Cilium فوق VPC CNI).
+#  يتطلب تفعيل GKE Dataplane V2 (Cilium) أو Calico على العنقود.
 # ============================================================================
 
 apiVersion: networking.k8s.io/v1
@@ -36,7 +36,7 @@ spec:
         - protocol: TCP
           port: 53
 ---
-# الـ gateway والواجهة يستقبلان من الـ ALB (خارج الـ namespace)
+# الـ gateway والواجهة يستقبلان من موازن Google (خارج الـ namespace)
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
@@ -51,8 +51,16 @@ spec:
   policyTypes: [Ingress]
   ingress:
     - from:
+        # تفصيلة تُنسى فيسقط الـ Ingress بصمت: الموازن العالمي لا يسكن
+        # الشبكة الخاصة، بل يصل إلى الـ pods عبر NEG من نطاقين ثابتين
+        # يملكهما Google. الاكتفاء بنطاق الشبكة يعني فحص صحة فاشلًا
+        # دائمًا وخلفيات تُعلَن غير سليمة بلا سبب ظاهر.
         - ipBlock:
-            # نطاق الـ VPC — الـ ALB يعمل داخله
+            cidr: 130.211.0.0/22
+        - ipBlock:
+            cidr: 35.191.0.0/16
+        # نطاق الشبكة نفسه — للنداءات الداخلية ولفحوص الصحة من العُقد
+        - ipBlock:
             cidr: 10.0.0.0/16
       ports:
         - protocol: TCP
@@ -104,7 +112,36 @@ spec:
             matchLabels:
               kubernetes.io/metadata.name: monitoring
 ---
-# الخروج إلى قواعد البيانات وخدمات AWS
+# OpenSearch صار داخل العنقود بعد الهجرة، فلم يعد محميًا بحدود خدمة
+# مُدارة كما كان. القاعدة هنا تعوّض ذلك: خدمة البحث وحدها تصل إلى منفذ
+# الاستعلام، وعُقد المحرك تصل إلى بعضها على منفذ النقل لتكوين العنقود.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-search-to-opensearch
+  namespace: topchoice
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: opensearch
+  policyTypes: [Ingress]
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/name: search-service
+      ports:
+        - protocol: TCP
+          port: 9200
+    - from:
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/name: opensearch
+      ports:
+        - protocol: TCP
+          port: 9300
+---
+# الخروج إلى قواعد البيانات وخدمات Google Cloud
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
@@ -119,26 +156,39 @@ spec:
             cidr: 10.0.0.0/16
       ports:
         - protocol: TCP
-          port: 5432   # Aurora PostgreSQL
+          port: 5432   # Cloud SQL for PostgreSQL عبر Auth Proxy
         - protocol: TCP
-          port: 27017  # DocumentDB
+          port: 27017  # MongoDB Atlas عبر Private Service Connect
         - protocol: TCP
-          port: 6379   # ElastiCache
+          port: 6379   # Memorystore for Redis Cluster
         - protocol: TCP
-          port: 9094   # MSK TLS
+          port: 9092   # Managed Service for Apache Kafka
         - protocol: TCP
-          port: 9098   # MSK IAM
-        - protocol: TCP
-          port: 443    # OpenSearch و VPC endpoints
-    # نداءات بين الخدمات داخل الـ namespace
+          port: 443    # Private Google Access ونقاط PSC
+    # نداءات بين الخدمات داخل الـ namespace — ومنها OpenSearch على 9200
     - to:
         - podSelector: {}
-    # HTTPS للخارج (بوابات الدفع) — عبر NAT
+    # ============================================================
+    #  خادم البيانات الوصفية على 169.254.169.254 — قاعدة تبدو خاطئة
+    #  للوهلة الأولى.
+    #
+    #  الغريزة تقول: احجب هذا العنوان، فهو مصدر أوراق الاعتماد.
+    #  لكن مع Workload Identity هو المسار المُعتمد الوحيد لها: الخادم
+    #  يعترض الطلب ويردّ بتوكن حساب الخدمة المرتبط بالـ KSA صاحب الـ pod
+    #  تحديدًا، لا بهوية العقدة التي يجلس عليها. حجبه لا يزيد الأمان،
+    #  بل يجعل كل نداء إلى Google Cloud API يفشل بلا أوراق اعتماد.
+    #  العزل هنا مسؤولية الوسيط نفسه لا قاعدة الشبكة.
+    # ============================================================
+    - to:
+        - ipBlock:
+            cidr: 169.254.169.254/32
+      ports:
+        - protocol: TCP
+          port: 80
+    # HTTPS للخارج (بوابات الدفع و SendGrid) — عبر Cloud NAT
     - to:
         - ipBlock:
             cidr: 0.0.0.0/0
-            except:
-              - 169.254.169.254/32  # حجب IMDS: يمنع سرقة أوراق اعتماد العقدة
       ports:
         - protocol: TCP
           port: 443

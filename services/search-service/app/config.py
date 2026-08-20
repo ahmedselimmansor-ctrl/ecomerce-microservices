@@ -16,9 +16,9 @@ class Settings(BaseSettings):
     opensearch_index: str = "products-v1"
     opensearch_user: str | None = None
     opensearch_password: str | None = None
-    # على Amazon OpenSearch Service: توقيع SigV4 عبر IRSA بدل اسم/كلمة مرور
-    opensearch_use_aws_auth: bool = False
-    aws_region: str = "me-south-1"
+    # نشغّل OpenSearch كـ StatefulSet على GKE — لا خدمة مُدارة في Google Cloud.
+    # المصادقة باسم وكلمة مرور من Secret Manager عبر External Secrets.
+    gcp_region: str = "me-central1"
 
     kafka_bootstrap_servers: str = "localhost:9092"
     kafka_topic_catalog: str = "catalog.product.v1"

@@ -1,52 +1,50 @@
 #!/usr/bin/env bash
 # ============================================================================
-#  تثبيت مكوّنات العنقود بعد إنشاء EKS بـ Terraform.
+#  تثبيت مكوّنات العنقود بعد إنشاء GKE بـ Terraform.
 #
 #  هذه المكوّنات لا تُدار في Terraform عمدًا: دورة حياتها تتبع العنقود
 #  لا البنية التحتية، وترقيتها يجب أن تكون منفصلة عن تغييرات الشبكة
 #  وقواعد البيانات.
+#
+#  القائمة هنا أقصر مما كانت: GKE يأتي بموازن الأحمال، ومخدّم المقاييس،
+#  وجمع السجلات مدمجة في العنقود نفسه، فلا نثبّت لها بديلًا.
 # ============================================================================
 set -euo pipefail
 
 CLUSTER="${CLUSTER:-topchoice-dev}"
-REGION="${AWS_REGION:-me-south-1}"
+REGION="${GCP_REGION:-me-central1}"
+PROJECT="${GOOGLE_CLOUD_PROJECT:-$(gcloud config get-value project 2>/dev/null || true)}"
 TF_DIR="$(dirname "$0")/../infra/terraform"
 
 need() { command -v "$1" >/dev/null 2>&1 || { echo "missing: $1" >&2; exit 1; }; }
-need aws
+need gcloud
 need kubectl
 need helm
 
+if [ -z "$PROJECT" ] || [ "$PROJECT" = "(unset)" ]; then
+  echo "set GOOGLE_CLOUD_PROJECT or run: gcloud config set project PROJECT_ID" >&2
+  exit 1
+fi
+
 echo "==> connecting to ${CLUSTER}"
-aws eks update-kubeconfig --name "$CLUSTER" --region "$REGION"
+gcloud container clusters get-credentials "$CLUSTER" \
+  --region "$REGION" --project "$PROJECT"
 kubectl cluster-info
 
 tf_out() { terraform -chdir="$TF_DIR" output -raw "$1" 2>/dev/null || echo ""; }
 
-ACCOUNT_ID="$(aws sts get-caller-identity --query Account --output text)"
-VPC_ID="$(aws eks describe-cluster --name "$CLUSTER" --region "$REGION" \
-  --query 'cluster.resourcesVpcConfig.vpcId' --output text)"
-
-# ---------------------------------------------- AWS Load Balancer Controller
+# ------------------------------------------------------ الدخول من الخارج
 
 echo ""
-echo "==> AWS Load Balancer Controller"
-helm repo add eks https://aws.github.io/eks-charts >/dev/null 2>&1 || true
-helm repo update >/dev/null
-
-LBC_ROLE="$(tf_out lb_controller_role_arn)"
-[ -n "$LBC_ROLE" ] || LBC_ROLE="arn:aws:iam::${ACCOUNT_ID}:role/${CLUSTER}-aws-lbc"
-
-helm upgrade --install aws-load-balancer-controller eks/aws-load-balancer-controller \
-  --namespace kube-system \
-  --set clusterName="$CLUSTER" \
-  --set region="$REGION" \
-  --set vpcId="$VPC_ID" \
-  --set serviceAccount.create=true \
-  --set serviceAccount.name=aws-load-balancer-controller \
-  --set "serviceAccount.annotations.eks\.amazonaws\.com/role-arn=${LBC_ROLE}" \
-  --set replicaCount=2 \
-  --wait --timeout 5m
+echo "==> Ingress / Gateway"
+# لا يوجد controller نثبّته: وحدة تحكم GKE تُنشئ موازن أحمال Google مباشرةً
+# من موارد Ingress و Gateway. نتحقق فقط أن الـ CRDs موجودة — غيابها يعني
+# أن العنقود أُنشئ بلا gateway_api_config في Terraform.
+if kubectl get crd gateways.gateway.networking.k8s.io >/dev/null 2>&1; then
+  echo "    Gateway API متاح"
+else
+  echo "    تحذير: Gateway API غير مفعّل على العنقود — يعمل Ingress وحده"
+fi
 
 # -------------------------------------------------- External Secrets Operator
 
@@ -55,21 +53,29 @@ echo "==> External Secrets Operator"
 helm repo add external-secrets https://charts.external-secrets.io >/dev/null 2>&1 || true
 helm repo update >/dev/null
 
+# الحساب الذي يقرأ Secret Manager. الربط عبر Workload Identity: لا مفتاح
+# JSON داخل العنقود، والصلاحية تُسحب بحذف الربط لا بتدوير سرّ.
+ESO_GSA="$(tf_out external_secrets_service_account)"
+[ -n "$ESO_GSA" ] || ESO_GSA="${CLUSTER}-external-secrets@${PROJECT}.iam.gserviceaccount.com"
+
 helm upgrade --install external-secrets external-secrets/external-secrets \
   --namespace external-secrets --create-namespace \
   --set installCRDs=true \
   --set webhook.replicaCount=2 \
+  --set serviceAccount.create=true \
+  --set serviceAccount.name=external-secrets \
+  --set "serviceAccount.annotations.iam\.gke\.io/gcp-service-account=${ESO_GSA}" \
   --wait --timeout 5m
 
 # ------------------------------------------------------------------- metrics
 
 echo ""
 echo "==> Metrics Server (مطلوب لـ HPA)"
-helm repo add metrics-server https://kubernetes-sigs.github.io/metrics-server/ >/dev/null 2>&1 || true
-helm upgrade --install metrics-server metrics-server/metrics-server \
-  --namespace kube-system \
-  --set 'args={--kubelet-insecure-tls}' \
-  --wait --timeout 3m
+# مدمج في GKE ويُدار مع نسخة العنقود؛ تثبيت نسخة ثانية يُنتج مصدرَي مقاييس
+# متنافسين ويجعل قرارات الـ HPA غير قابلة للتفسير.
+kubectl -n kube-system get deployment metrics-server >/dev/null 2>&1 \
+  && echo "    متوفّر مع العنقود" \
+  || echo "    تحذير: غير موجود — HPA لن يتوسّع"
 
 # ---------------------------------------------------------------------- KEDA
 
@@ -81,11 +87,11 @@ helm upgrade --install keda kedacore/keda \
   --namespace keda --create-namespace \
   --wait --timeout 5m
 
-# ----------------------------------------------------------------- Karpenter
+# ------------------------------------------------------------ توفير العُقد
 
 echo ""
-echo "==> Karpenter (توفير العُقد تلقائيًا)"
-echo "    ملاحظة: يحتاج إعداد IAM إضافيًا — راجع docs/06-deployment-eks.md"
+echo "==> Node auto-provisioning (توفير العُقد تلقائيًا)"
+echo "    مُفعَّل على مستوى العنقود في Terraform — راجع docs/06-deployment-gke.md"
 
 # ------------------------------------------------------------- observability
 
@@ -105,13 +111,12 @@ helm upgrade --install kube-prometheus prometheus-community/kube-prometheus-stac
 kubectl label namespace monitoring kubernetes.io/metadata.name=monitoring --overwrite
 
 echo ""
-echo "==> Fluent Bit → CloudWatch Logs"
-helm repo add aws-observability https://aws-observability.github.io/helm-charts >/dev/null 2>&1 || true
-helm upgrade --install aws-for-fluent-bit aws-observability/aws-for-fluent-bit \
-  --namespace kube-system \
-  --set cloudWatchLogs.region="$REGION" \
-  --set cloudWatchLogs.logGroupName="/aws/eks/${CLUSTER}/application" \
-  --wait --timeout 5m || echo "    (تخطّي: يحتاج صلاحيات CloudWatch على دور العقدة)"
+echo "==> Cloud Logging"
+# وكيل السجلات جزء من العنقود المُدار: كل ما يُكتب على stdout يصل
+# Cloud Logging بلا DaemonSet نصونه بأنفسنا.
+gcloud container clusters describe "$CLUSTER" \
+  --region "$REGION" --project "$PROJECT" \
+  --format 'value(loggingConfig.componentConfig.enableComponents)'
 
 echo ""
 echo "=============================================="

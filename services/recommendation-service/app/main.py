@@ -14,7 +14,7 @@ from redis.asyncio import Redis
 
 from .config import get_settings
 from .fallback import FallbackEngine
-from .personalize import PersonalizeClient
+from .vertex_retail import RetailClient
 
 settings = get_settings()
 
@@ -26,13 +26,13 @@ log = logging.getLogger("recommendation-service")
 
 redis = Redis.from_url(settings.redis_url, decode_responses=True,
                        socket_connect_timeout=1.0, socket_timeout=1.0)
-personalize = PersonalizeClient(settings)
+retail = RetailClient(settings)
 fallback = FallbackEngine(settings, redis)
 
 
 @asynccontextmanager
 async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
-    source = "Amazon Personalize" if personalize.enabled else "local fallback engine"
+    source = "Vertex AI Search for commerce" if retail.enabled else "local fallback engine"
     log.info("recommendation-service ready — source: %s", source)
     yield
     await fallback.close()
@@ -86,7 +86,7 @@ async def ready() -> dict[str, Any]:
         redis_up = False
     return {
         "status": "UP",
-        "personalize": "ENABLED" if personalize.enabled else "FALLBACK",
+        "retail": "ENABLED" if retail.enabled else "FALLBACK",
         "redis": "UP" if redis_up else "DEGRADED",
     }
 
@@ -111,7 +111,7 @@ async def for_you(
 
     skus: list[str] = []
     if x_user_id:
-        result = await asyncio.to_thread(personalize.recommend_for_user, x_user_id, limit)
+        result = await asyncio.to_thread(retail.recommend_for_user, x_user_id, limit)
         if result:
             skus = result
         else:
@@ -143,7 +143,7 @@ async def related(
         except Exception:  # noqa: BLE001
             pass
 
-    result = await asyncio.to_thread(personalize.related_items, sku, x_user_id, limit)
+    result = await asyncio.to_thread(retail.related_items, sku, x_user_id, limit)
     skus = result if result else await fallback.related(sku, limit)
     items = await fallback.hydrate(skus, locale)
 
@@ -180,7 +180,7 @@ async def rerank(
     if not x_user_id or not body.skus:
         return {"skus": body.skus, "personalized": False}
 
-    result = await asyncio.to_thread(personalize.rerank, x_user_id, body.skus)
+    result = await asyncio.to_thread(retail.rerank, x_user_id, body.skus)
     if result:
         return {"skus": result, "personalized": True}
     return {"skus": body.skus, "personalized": False}
@@ -207,10 +207,10 @@ async def track_event(
         fallback.record_interaction,
         x_user_id, event.sku, event.eventType, event.category,
     )
-    if personalize.enabled:
+    if retail.enabled:
         background.add_task(
             asyncio.to_thread,
-            personalize.track, x_user_id, event.sessionId, event.eventType, event.sku, now,
+            retail.track, x_user_id, event.sessionId, event.eventType, event.sku, now,
         )
 
     return {"accepted": True}
@@ -222,11 +222,11 @@ async def stats(request: Request) -> dict[str, Any]:
         raise HTTPException(status_code=403, detail={"code": "INTERNAL_ONLY"})
     top = await fallback.trending(20)
     return {
-        "personalize": personalize.enabled,
+        "retail": retail.enabled,
         "topTrending": top,
-        "campaigns": {
-            "user": bool(settings.personalize_campaign_user),
-            "related": bool(settings.personalize_campaign_related),
-            "ranking": bool(settings.personalize_campaign_ranking),
+        "servingConfigs": {
+            "user": bool(settings.retail_serving_config_user),
+            "related": bool(settings.retail_serving_config_related),
+            "ranking": bool(settings.retail_serving_config_ranking),
         },
     }

@@ -15,7 +15,7 @@
   <artifactId>catalog-service</artifactId>
   <version>1.0.0</version>
   <name>catalog-service</name>
-  <description>Product catalog backed by MongoDB (Amazon DocumentDB in AWS)</description>
+  <description>Product catalog backed by MongoDB (MongoDB Atlas on Google Cloud)</description>
 
   <properties>
     <java.version>21</java.version>

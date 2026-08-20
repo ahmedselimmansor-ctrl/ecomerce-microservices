@@ -14,8 +14,8 @@ const secret = new TextEncoder().encode(config.JWT_SECRET);
 /**
  * يتحقق من التوكن ويضع هوية المستخدم على الطلب.
  *
- * <p>في الإنتاج على AWS يُستبدل السرّ المشترك بـ RS256: تُوقَّع التوكنات
- * بمفتاح خاص في KMS، ويجلب هذا الـ gateway المفتاح العام من JWKS ويخزّنه —
+ * <p>في الإنتاج على Google Cloud يُستبدل السرّ المشترك بـ RS256: تُوقَّع
+ * التوكنات بمفتاح خاص في Cloud KMS، ويجلب هذا الـ gateway المفتاح العام من JWKS ويخزّنه —
  * فلا يحتاج أحد لمعرفة أي سرّ.
  */
 async function plugin(app: FastifyInstance): Promise<void> {

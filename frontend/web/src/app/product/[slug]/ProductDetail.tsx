@@ -18,7 +18,7 @@ export function ProductDetail({ product, availability }: Props) {
   const [adding, setAdding] = useState(false);
   const addItem = useCart((s) => s.addItem);
 
-  /** تسجيل المشاهدة يغذّي Amazon Personalize — يُرسل مرة واحدة لكل منتج. */
+  /** تسجيل المشاهدة يغذّي Vertex AI Search for commerce — يُرسل مرة واحدة لكل منتج. */
   useEffect(() => {
     void api
       .post('/api/v1/bff/track', z.unknown(), {

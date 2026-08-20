@@ -109,7 +109,7 @@ public class ProductService {
 
     /**
      * منتجات مشابهة — احتياطي محلي فقط.
-     * التوصيات الحقيقية تأتي من recommendation-service عبر Amazon Personalize.
+     * التوصيات الحقيقية تأتي من recommendation-service عبر Vertex AI Search.
      */
     public List<ProductSummary> similar(String sku, int limit, String locale) {
         Product product = repo.findBySkuAndStatus(sku, ACTIVE)

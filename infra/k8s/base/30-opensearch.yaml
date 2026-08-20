@@ -1,0 +1,218 @@
+# ============================================================================
+#  OpenSearch داخل العنقود — التكلفة الحقيقية لهذه الهجرة.
+#
+#  لا يوجد في GCP نظير مُدار لـ OpenSearch Service. كنّا نستهلك نقطة نهاية
+#  جاهزة؛ صرنا مسؤولين عن الترقية والنسخ الاحتياطي وإعادة التوازن وحجم
+#  الكومة. هذا ليس تفصيلًا تشغيليًا صغيرًا، وهو أثقل ما دفعناه في الانتقال.
+#
+#  البدائل التي رُفضت:
+#   · Vertex AI Search: محرك مختلف كليًا، يفرض إعادة كتابة استعلامات
+#     البحث والفلترة الوجهية في خدمة البحث بالكامل.
+#   · Elastic Cloud على GCP: يحل التشغيل ويضيف فاتورة وطرفًا ثالثًا آخر
+#     بعد MongoDB Atlas.
+#  البقاء على OpenSearch يحفظ كود خدمة البحث كما هو حرفًا بحرف.
+# ============================================================================
+
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  name: topchoice-ssd
+provisioner: pd.csi.storage.gke.io
+parameters:
+  # pd-ssd لا hyperdisk-balanced: الأخير أسرع وأرخص لكنه يشترط عُقدًا
+  # من الجيل الثالث فصاعدًا. اشتراط ذلك هنا يربط تخزين المحرك بنوع
+  # العقدة، وهو قيد لا نريده على مجموعة عُقد تتوسّع تلقائيًا.
+  type: pd-ssd
+# التوسيع لاحقًا دون إعادة إنشاء الـ PVC — فهرس المنتجات ينمو ولا ينكمش
+allowVolumeExpansion: true
+# التقييد حتى جدولة الـ pod: القرص يُنشأ في نطاق التوفر الذي هبطت فيه
+# العقدة فعلًا، لا في نطاق عشوائي يمنع الجدولة بعد ذلك
+volumeBindingMode: WaitForFirstConsumer
+reclaimPolicy: Retain
+---
+# خدمة بلا رأس: تمنح كل عقدة اسم DNS ثابتًا تحتاجه لتكوين العنقود
+apiVersion: v1
+kind: Service
+metadata:
+  name: opensearch-headless
+  namespace: topchoice
+  labels:
+    app.kubernetes.io/name: opensearch
+spec:
+  clusterIP: None
+  publishNotReadyAddresses: true
+  selector:
+    app.kubernetes.io/name: opensearch
+  ports:
+    - name: transport
+      port: 9300
+---
+# نقطة الدخول التي تعرفها خدمة البحث
+apiVersion: v1
+kind: Service
+metadata:
+  name: opensearch
+  namespace: topchoice
+  labels:
+    app.kubernetes.io/name: opensearch
+spec:
+  type: ClusterIP
+  selector:
+    app.kubernetes.io/name: opensearch
+  ports:
+    - name: http
+      port: 9200
+      targetPort: http
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: opensearch
+  namespace: topchoice
+  labels:
+    app.kubernetes.io/name: opensearch
+    app.kubernetes.io/part-of: topchoice
+spec:
+  serviceName: opensearch-headless
+  replicas: 3
+  # الإقلاع بالترتيب مقصود: opensearch-0 يكوّن العنقود أولًا ثم ينضم
+  # الباقي إليه، فلا يوجد احتمال انقسام عند التشكيل الأول
+  podManagementPolicy: OrderedReady
+  updateStrategy:
+    type: RollingUpdate
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: opensearch
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: opensearch
+        app.kubernetes.io/part-of: topchoice
+    spec:
+      serviceAccountName: topchoice-default
+      terminationGracePeriodSeconds: 120
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        fsGroup: 1000
+        seccompProfile:
+          type: RuntimeDefault
+      # فصل العُقد إلزامي لا تفضيلي: ثلاث نسخ على عقدة واحدة تعني
+      # أن سقوطها يُفقد النصاب والبيانات معًا
+      affinity:
+        podAntiAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            - labelSelector:
+                matchLabels:
+                  app.kubernetes.io/name: opensearch
+              topologyKey: kubernetes.io/hostname
+      topologySpreadConstraints:
+        - maxSkew: 1
+          topologyKey: topology.kubernetes.io/zone
+          whenUnsatisfiable: ScheduleAnyway
+          labelSelector:
+            matchLabels:
+              app.kubernetes.io/name: opensearch
+      containers:
+        - name: opensearch
+          image: opensearchproject/opensearch:2.17.1
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: http
+              containerPort: 9200
+            - name: transport
+              containerPort: 9300
+          env:
+            - name: cluster.name
+              value: topchoice-search
+            - name: node.name
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+            - name: discovery.seed_hosts
+              value: opensearch-headless
+            # عقدة واحدة في قائمة التشكيل تكفي وتعمل في dev (نسخة واحدة)
+            # و prod (ثلاث نسخ) دون فرع في الإعداد
+            - name: cluster.initial_cluster_manager_nodes
+              value: opensearch-0
+            - name: OPENSEARCH_JAVA_OPTS
+              value: "-Xms1g -Xmx1g"
+            # الـ namespace يفرض pod-security مستوى restricted، فلا يمكن
+            # تشغيل initContainer مميّز لضبط vm.max_map_count. التعطيل
+            # يكلّفنا قراءة أبطأ للفهرس من القرص، وهو ثمن أخف بكثير من
+            # ثقب في سياسة أمان الـ namespace كلها.
+            - name: node.store.allow_mmap
+              value: "false"
+            # إضافة الأمان معطّلة: العزل يقع عند حدود الشبكة
+            # (راجع allow-search-to-opensearch في 60-networkpolicy.yaml)
+            # لا داخل المحرك. لو فُتح المحرك يومًا خارج الـ namespace
+            # فهذا أول سطر يجب أن يتغيّر.
+            - name: DISABLE_SECURITY_PLUGIN
+              value: "true"
+            - name: DISABLE_INSTALL_DEMO_CONFIG
+              value: "true"
+          resources:
+            requests:
+              cpu: 500m
+              memory: 2Gi
+            limits:
+              # الحد يساوي ضعف الكومة تقريبًا: JVM تحتاج ذاكرة خارج
+              # الكومة للفهارس المقلوبة والمخازن المؤقتة
+              cpu: "2"
+              memory: 3Gi
+          startupProbe:
+            httpGet:
+              path: /_cluster/health?local=true
+              port: http
+            periodSeconds: 10
+            # حتى خمس دقائق: استرجاع الأجزاء بعد إعادة تشغيل بطيء
+            failureThreshold: 30
+          livenessProbe:
+            tcpSocket:
+              port: transport
+            periodSeconds: 20
+            failureThreshold: 3
+          readinessProbe:
+            # yellow مقبول: نسخة احتياطية ناقصة لا تمنع خدمة البحث،
+            # واشتراط green يُبقي العنقود كله خارج الخدمة أثناء الاسترجاع
+            httpGet:
+              path: /_cluster/health?local=true&wait_for_status=yellow&timeout=5s
+              port: http
+            periodSeconds: 10
+            timeoutSeconds: 6
+            failureThreshold: 3
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: ["ALL"]
+          volumeMounts:
+            - name: data
+              mountPath: /usr/share/opensearch/data
+            - name: tmp
+              mountPath: /tmp
+      volumes:
+        - name: tmp
+          emptyDir:
+            sizeLimit: 256Mi
+  volumeClaimTemplates:
+    - metadata:
+        name: data
+      spec:
+        accessModes: [ReadWriteOnce]
+        storageClassName: topchoice-ssd
+        resources:
+          requests:
+            storage: 50Gi
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: opensearch
+  namespace: topchoice
+spec:
+  # اثنتان من ثلاث تبقيان دائمًا: النصاب ينكسر عند فقد عقدتين،
+  # وحينها يتوقف العنقود عن قبول الكتابة كليًا
+  minAvailable: 2
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: opensearch

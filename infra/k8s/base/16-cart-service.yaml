@@ -1,4 +1,4 @@
-# خفيف جدًا: كل الحالة في ElastiCache
+# خفيف جدًا: كل الحالة في Memorystore
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -62,8 +62,10 @@ spec:
           env:
             - name: LOG_LEVEL
               valueFrom: { configMapKeyRef: { name: topchoice-config, key: LOG_LEVEL } }
-            - name: AWS_REGION
-              valueFrom: { configMapKeyRef: { name: topchoice-config, key: AWS_REGION } }
+            - name: GCP_PROJECT_ID
+              valueFrom: { configMapKeyRef: { name: topchoice-config, key: GCP_PROJECT_ID } }
+            - name: GCP_REGION
+              valueFrom: { configMapKeyRef: { name: topchoice-config, key: GCP_REGION } }
             - name: REDIS_URL
               valueFrom: { secretKeyRef: { name: topchoice-database, key: REDIS_URL } }
           resources:

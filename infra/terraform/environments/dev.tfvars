@@ -1,45 +1,55 @@
 # ============================================================================
-#  بيئة التطوير — مُحسَّنة للتكلفة لا للتوفر
+#  dev — أرخص ما يمكن مع بقاء الشكل مطابقًا للإنتاج
+#
+#  المبدأ: نقلّل الحجم لا البنية. نفس الموارد ونفس المسارات، بأصغر فئة ممكنة.
+#  بيئة تطوير مختلفة بنيويًا عن الإنتاج تخفي الأعطال حتى النشر.
 # ============================================================================
 
+project_id  = "topchoice-dev"
 environment = "dev"
-aws_region  = "me-south-1"
-owner       = "platform-team"
+region      = "me-central1"
 
-# NAT واحد بدل ثلاثة يوفّر ~90$/شهر. نقطة فشل واحدة، مقبولة في dev.
-single_nat_gateway = true
-az_count           = 2
+# ------------------------------------------------------------------- شبكة
+subnet_cidr   = "10.0.0.0/20"
+pods_cidr     = "10.4.0.0/16"
+services_cidr = "10.8.0.0/20"
+master_cidr   = "172.16.0.0/28"
 
-# ---------------------------------------------------------------------- eks
-kubernetes_version  = "1.31"
-node_instance_types = ["m7g.large", "c7g.large"]
-node_desired_size   = 2
-node_min_size       = 1
-node_max_size       = 6
-enable_spot         = true
+# --------------------------------------------------------------------- gke
+gke_release_channel           = "RAPID" # نلتقي بالمشاكل هنا قبل الإنتاج
+node_machine_type             = "t2a-standard-2"
+node_count                    = 1
+node_min_count                = 1
+node_max_count                = 4
+node_disk_size_gb             = 50
+enable_spot                   = true
+enable_node_auto_provisioning = false # تبسيط: مجمّع ثابت يكفي في dev
+nap_max_cpu                   = 16
+nap_max_memory_gb             = 64
 
-# ---------------------------------------------------------------- databases
-aurora_instance_class        = "db.t4g.medium"
-aurora_replica_count         = 0 # بلا نسخة قارئة في dev
-aurora_backup_retention_days = 1
+# --------------------------------------------------------------- قواعد بيانات
+cloudsql_tier                  = "db-custom-1-3840"
+cloudsql_availability_type     = "ZONAL" # بلا نسخة احتياطية ساخنة
+cloudsql_disk_size_gb          = 20
+cloudsql_backup_retention_days = 3
+cloudsql_enable_read_replica   = false
+cloudsql_deletion_protection   = false
 
-documentdb_instance_class = "db.t4g.medium"
-documentdb_instance_count = 1
+redis_shard_count   = 1
+redis_replica_count = 0
 
-redis_node_type          = "cache.t4g.micro"
-redis_shards             = 1
-redis_replicas_per_shard = 0
+# ------------------------------------------------------------------- kafka
+kafka_vcpu_count         = 3
+kafka_memory_gb          = 12
+kafka_partitions         = 3
+kafka_replication_factor = 3
 
-# -------------------------------------------------------------------- kafka
-msk_broker_instance_type = "kafka.t3.small"
-msk_broker_count         = 2
-msk_volume_size_gb       = 20
+# -------------------------------------------------------------- opensearch
+opensearch_node_count   = 1
+opensearch_disk_size_gb = 20
 
-# --------------------------------------------------------------- opensearch
-opensearch_instance_type  = "t3.small.search"
-opensearch_instance_count = 1
-
-# ------------------------------------------------------------------- other
+# -------------------------------------------------------------------- أخرى
 domain_name        = ""
-enable_waf         = false # WAF مكلف نسبيًا ولا يلزم في dev
-enable_personalize = false
+enable_cloud_armor = false # مكلف نسبيًا ولا يلزم في dev
+enable_retail_ai   = false
+cdn_default_ttl    = 60 # كاش قصير حتى نرى تغييراتنا فورًا

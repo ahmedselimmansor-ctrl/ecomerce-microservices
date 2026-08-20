@@ -2,16 +2,21 @@
 
 ## 1. توزيع المخازن
 
-| المخزن | الخدمة | السبب |
-|---|---|---|
-| PostgreSQL `topchoice_identity` | identity | علاقات + ACID |
-| PostgreSQL `topchoice_order` | order | معاملات + تدقيق محاسبي |
-| PostgreSQL `topchoice_payment` | payment | متطلبات مالية صارمة |
-| PostgreSQL `topchoice_inventory` | inventory | حجز متزامن يحتاج قفل صفوف |
-| MongoDB `topchoice_catalog` | catalog | مخطط متغيّر لكل قسم |
-| Redis | cart · gateway · recommendation | زمن استجابة تحت المللي ثانية |
-| OpenSearch | search | بحث نصي + facets |
-| DynamoDB | gateway | idempotency + sessions مع TTL |
+| المخزن | مُدار بـ | الخدمة | السبب |
+|---|---|---|---|
+| PostgreSQL `topchoice_identity` | Cloud SQL | identity | علاقات + ACID |
+| PostgreSQL `topchoice_order` | Cloud SQL | order | معاملات + تدقيق محاسبي |
+| PostgreSQL `topchoice_payment` | Cloud SQL | payment | متطلبات مالية صارمة |
+| PostgreSQL `topchoice_inventory` | Cloud SQL | inventory | حجز متزامن يحتاج قفل صفوف |
+| MongoDB `topchoice_catalog` | MongoDB Atlas على GCP | catalog | مخطط متغيّر لكل قسم |
+| Redis | Memorystore for Redis Cluster | cart · gateway · recommendation | زمن استجابة تحت المللي ثانية |
+| OpenSearch | مُدار ذاتيًا على GKE | search | بحث نصي + facets |
+| Firestore (Native mode) | Firestore | gateway | idempotency + sessions مع TTL |
+
+> **قواعد PostgreSQL الأربع على نسخة Cloud SQL واحدة، لا أربع نسخ.** العزل منطقي
+> (قاعدة لكل خدمة، ومستخدم لكل قاعدة بلا صلاحية على غيرها) لا فيزيائي. هذا يوفّر
+> ثلاث نسخ عالية التوفر بلا تنازل عن حدود الملكية؛ لو صار حِمل خدمة يزاحم غيرها
+> فالفصل إلى نسخة مستقلة تغييرُ سلسلةِ اتصال لا تغييرُ مخطط.
 
 ---
 
@@ -138,6 +143,15 @@ db.products.createIndex({ status: 1, updatedAt: -1 })
 db.products.createIndex({ "title.ar": "text", "title.en": "text", tags: "text" })
 ```
 
+> **هذا MongoDB حقيقي لا نسخة متوافقة معه.** العنقود على MongoDB Atlas داخل GCP،
+> ويُوصَل عبر Private Service Connect فلا تخرج حركته إلى الإنترنت ولا تحتاج
+> عنوانًا عامًا. الفارق عملي لا شكلي: `$text` والفهارس الجزئية وتغيّرات الـ
+> aggregation pipeline تعمل بنفس دلالات المحرك الأصلي، وترقية إصدار المحرك لا
+> تنتظر أن يلحق بها مزوّد متوافق.
+
+> **ملاحظة على `$text`:** الفهرس النصي هنا للبحث الإداري داخل اللوحة فقط. بحث
+> المتجر يمر بـ OpenSearch — التحليل العربي في MongoDB أضعف من أن يُبنى عليه.
+
 ## 7. Redis — مخطط المفاتيح
 
 | المفتاح | النوع | TTL | الغرض |
@@ -154,6 +168,11 @@ db.products.createIndex({ "title.ar": "text", "title.en": "text", tags: "text" }
 | `idem:{key}` | String | 24h | نتيجة عملية idempotent |
 
 ## 8. OpenSearch — mapping المنتجات
+
+> **يعمل داخل العنقود، لا كخدمة مُدارة.** لا يوجد مقابل مُدار لـ OpenSearch على
+> Google Cloud، فهو StatefulSet على GKE بأقراص مستمرة. النتيجة على المخطط أدناه
+> مباشرة: `number_of_replicas: 1` تعني نسخة على عقدة أخرى في نطاق توفر آخر —
+> وهذا كل ما يحمينا من سقوط نطاق، فلا مزوّد يعيد بناء الفهرس نيابةً عنّا.
 
 ```json
 {
@@ -197,13 +216,85 @@ db.products.createIndex({ "title.ar": "text", "title.en": "text", tags: "text" }
 }
 ```
 
-## 9. DynamoDB
+## 9. Firestore (Native mode)
 
-| الجدول | PK | SK | TTL | الغرض |
-|---|---|---|---|---|
-| `topchoice-idempotency` | `key` | — | `expiresAt` | منع تكرار الطلبات |
-| `topchoice-sessions` | `sid` | — | `expiresAt` | جلسات الويب |
-| `topchoice-user-events` | `userId` | `ts#eventId` | `expiresAt` | تفاعلات لـ Personalize |
+نمط الوصول هنا بسيط عمدًا: قراءة وكتابة بمفتاح واحد، وانتهاء صلاحية تلقائي، وبلا
+استعلامات معقدة. Firestore في وضع Native يغطيه بلا سعة نُديرها ولا فهارس نصمّمها
+مسبقًا.
+
+| المجموعة | معرّف المستند | حقل TTL | الغرض |
+|---|---|---|---|
+| `idempotency` | مفتاح الـ Idempotency-Key | `expiresAt` | منع تكرار الطلبات |
+| `sessions` | `sid` | `expiresAt` | جلسات الويب |
+| `user_events/{userId}/events` | `eventId` | `expiresAt` | تفاعلات لـ Vertex AI Search for commerce |
+
+```javascript
+// idempotency/{key}
+{
+  key:        "550e8400-e29b-41d4-a716-446655440000",
+  userId:     "user-uuid",           // المفتاح مرتبط بصاحبه — لا يُقرأ طلبُ غيرِه بتخمين مفتاح
+  response:   { orderId: "...", status: "PENDING" },
+  createdAt:  Timestamp,
+  expiresAt:  Timestamp              // createdAt + 24h
+}
+
+// sessions/{sid}
+{
+  userId:     "user-uuid",
+  locale:     "ar",
+  createdAt:  Timestamp,
+  lastSeenAt: Timestamp,
+  expiresAt:  Timestamp              // lastSeenAt + 24h
+}
+
+// user_events/{userId}/events/{eventId}
+{
+  eventType:  "detail-page-view",    // detail-page-view | add-to-cart | purchase-complete
+  sku:        "TC-APL-IP15-128-BLK",
+  ts:         Timestamp,
+  expiresAt:  Timestamp              // ts + 90d
+}
+```
+
+### 9.1 لماذا مجموعة فرعية لأحداث المستخدم؟
+
+المفتاح المركّب `userId` + `ts#eventId` لم يعد له معنى في Firestore: المستند لا
+يملك مفتاح فرز مستقلًا. الشكل الطبيعي هنا مجموعة فرعية تحت المستخدم
+(`user_events/{userId}/events`)، وهو ليس ترجمة حرفية بل تحسين فعلي:
+
+- استعلام «آخر 50 تفاعلًا لهذا المستخدم» يقرأ مجموعة واحدة صغيرة، لا يمسح
+  مساحة مفاتيح مشتركة.
+- «كل مشتريات اليوم عبر كل المستخدمين» — لتغذية Retail API — تبقى ممكنة بـ
+  **collection group query** على `events`، دون تكرار البيانات في مجموعة ثانية.
+
+### 9.2 الفهارس المركّبة
+
+الفهرسة الأحادية تلقائية في Firestore. المركّبة تُعرَّف صراحةً في Terraform،
+وهذه هي الثلاثة الوحيدة التي نحتاجها:
+
+| المجموعة | النطاق | الحقول | يخدم |
+|---|---|---|---|
+| `events` | collection group | `eventType` ASC · `ts` DESC | تصدير المشتريات إلى Retail API |
+| `events` | collection | `sku` ASC · `ts` DESC | «شوهد مؤخرًا» لمستخدم بعينه |
+| `sessions` | collection | `userId` ASC · `lastSeenAt` DESC | «أنهِ كل جلساتي» عند تسريب توكن |
+
+> استعلام يفتقد فهرسه لا يبطؤ في Firestore — **يفشل** برسالة تحوي رابط إنشاء
+> الفهرس. هذا مزعج في التطوير ومقصود: يمنع استعلامًا يمسح مجموعة كاملة من الوصول
+> إلى الإنتاج أصلًا. الرابط للتشخيص فقط؛ الفهرس يُضاف في Terraform لا بالنقر.
+
+### 9.3 TTL — الفارق الذي يجب أن يعرفه الكود
+
+`expiresAt` حقل `Timestamp` عادي، وسياسة TTL تُضبط عليه مرة واحدة لكل مجموعة.
+لكن **الحذف ليس لحظيًا**: Firestore يضمن الحذف عمومًا خلال 24 ساعة من وقت
+الانتهاء، لا في اللحظة نفسها.
+
+النتيجة قاعدة صارمة: **كل قراءة تفحص `expiresAt` بنفسها وتتعامل مع المستند
+المنتهي كأنه غير موجود.** بلا هذا، مفتاح idempotency عمره 24 ساعة قد يُعيد
+استجابة قديمة بعد 40 ساعة، وجلسة منتهية قد تظل صالحة ليوم كامل — وهي ثغرة لا
+عطل أداء.
+
+نفس القاعدة تحمينا محليًا: محاكي Firestore لا ينفّذ TTL إطلاقًا، فالفحص في الكود
+هو ما يجعل السلوك المحلي مطابقًا للإنتاج.
 
 ---
 
@@ -229,10 +320,35 @@ db.products.createIndex({ "title.ar": "text", "title.en": "text", tags: "text" }
 | `order.events.v1` | 12 | `orderId` | order | inventory · payment · notification · analytics |
 | `inventory.events.v1` | 12 | `orderId` | inventory | order |
 | `payment.events.v1` | 12 | `orderId` | payment | order · notification |
-| `user.interactions.v1` | 6 | `userId` | gateway | recommendation · Firehose→S3 |
+| `user.interactions.v1` | 6 | `userId` | gateway | recommendation · جسر Pub/Sub → Dataflow → BigQuery |
 | `notification.commands.v1` | 3 | `userId` | order · identity | notification |
 
 **قواعد:** التقسيم بمفتاح التجميع (aggregate id) لضمان الترتيب داخل نفس الطلب · تطور المخطط backward-compatible (إضافة حقول اختيارية فقط) · إصدار جديد = topic جديد `.v2` · كل consumer group له DLQ (`<topic>.dlq`).
+
+### لماذا Kafka وPub/Sub معًا؟
+
+السؤال المشروع على Google Cloud: لماذا لا نستبدل Kafka بـ Pub/Sub ونختصر خدمة
+مُدارة كاملة؟ الجواب في السطر الأول من القواعد أعلاه — **الترتيب**.
+
+الـ Saga تعتمد على أن أحداث الطلب الواحد تصل بترتيبها. Pub/Sub يوفّر ترتيبًا
+بمفتاح (ordering key)، لكنه يفرض ثمنًا لا نريده هنا: الترتيب يُضعف التوازي عبر
+المفتاح نفسه، ولا يوجد مفهوم «إعادة القراءة من الإزاحة» الذي نعيد به بناء فهرس
+البحث بالكامل من الصفر. إعادة بناء فهرس OpenSearch من `catalog.product.v1` هي
+حجر الأساس في [ADR 0003](adr/0003-polyglot-persistence.md) — بدونها لا يعود
+الفهرس «مشتقًّا قابلًا لإعادة البناء» بل مصدر حقيقة ثانيًا.
+
+فالتقسيم بمسؤوليتين لا بتفضيل:
+
+| | Kafka | Pub/Sub |
+|---|---|---|
+| الاستخدام | ناقل الـ Saga وسجل الأحداث القابل لإعادة القراءة | ما يخرج من النظام: إشعارات، تحليلات، fan-out |
+| الترتيب | لكل partition — مضمون داخل الطلب الواحد | بمفتاح، وبكلفة على الإنتاجية |
+| الاحتفاظ | مدة محددة، تُقرأ من أي إزاحة | حتى الإقرار (ack) |
+| المستهلك | consumer group يتحكم في إزاحته | اشتراك push أو pull |
+
+عمليًا: `notification.commands.v1` و`user.interactions.v1` يُجسَّران إلى Pub/Sub
+لأن مستهلكهما لا يحتاج إعادة قراءة، ويستفيدان من fan-out إلى Dataflow وSendGrid
+بلا كتابة مستهلك Kafka جديد لكل وجهة.
 
 ### أمثلة الحمولات (payloads)
 

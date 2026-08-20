@@ -250,7 +250,7 @@ export function ProductForm({ initial, mode }: Props) {
             )}
 
             <p className="mt-2 text-xs text-tc-muted">
-              في الإنتاج تُرفع الصور إلى S3 وتُقدَّم عبر CloudFront. هنا نقبل روابط مباشرة.
+              في الإنتاج تُرفع الصور إلى Cloud Storage وتُقدَّم عبر Cloud CDN. هنا نقبل روابط مباشرة.
             </p>
           </Section>
 

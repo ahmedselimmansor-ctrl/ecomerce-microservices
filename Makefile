@@ -26,7 +26,8 @@ up: .env ## تشغيل المنصة كاملة محليًا
 
 .PHONY: infra-up
 infra-up: .env ## تشغيل البنية التحتية فقط (DBs, Kafka, Redis...)
-	$(COMPOSE) up -d postgres mongo redis kafka opensearch localstack mailpit kafka-ui
+	$(COMPOSE) up -d postgres mongo redis kafka opensearch \
+		pubsub-emulator firestore-emulator fake-gcs gcp-init mailpit kafka-ui
 
 .PHONY: down
 down: ## إيقاف كل الحاويات
@@ -94,12 +95,18 @@ tf-destroy: ## هدم البنية التحتية
 
 # ---------------------------------------------------------------- kubernetes
 
-.PHONY: kubeconfig
-kubeconfig: ## ربط kubectl بعنقود EKS
-	aws eks update-kubeconfig --name $(or $(CLUSTER),topchoice-dev) --region $(or $(REGION),me-south-1)
+# اسم العنقود لا يحمل اسم المشروع، وgcloud يرفض العمل بدونه. نقرأه من إعداد
+# gcloud الحالي عند الإغفال (تُقيَّم عند الاستدعاء فقط، لا عند قراءة الملف).
+GCLOUD_PROJECT = $(shell gcloud config get-value project 2>/dev/null)
 
-.PHONY: deploy-eks
-deploy-eks: ## نشر على EKS
+.PHONY: kubeconfig
+kubeconfig: ## ربط kubectl بعنقود GKE
+	gcloud container clusters get-credentials $(or $(CLUSTER),topchoice-dev) \
+		--region $(or $(REGION),me-central1) \
+		--project $(or $(PROJECT),$(GOOGLE_CLOUD_PROJECT),$(GCLOUD_PROJECT))
+
+.PHONY: deploy-gke
+deploy-gke: ## نشر على GKE
 	kubectl apply -k infra/k8s/overlays/$(or $(ENV),dev)
 
 .PHONY: k8s-diff
@@ -107,5 +114,5 @@ k8s-diff: ## معاينة تغييرات Kubernetes
 	kubectl diff -k infra/k8s/overlays/$(or $(ENV),dev) || true
 
 .PHONY: images
-images: ## بناء ورفع الصور إلى ECR
-	./scripts/push-images.sh $(or $(REGISTRY),$(ECR_REGISTRY)) $(or $(TAG),latest)
+images: ## بناء ورفع الصور إلى Artifact Registry
+	./scripts/push-images.sh $(or $(REGISTRY),$(AR_REGISTRY)) $(or $(TAG),latest)

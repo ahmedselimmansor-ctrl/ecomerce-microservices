@@ -62,12 +62,20 @@ spec:
           env:
             - name: LOG_LEVEL
               valueFrom: { configMapKeyRef: { name: topchoice-config, key: LOG_LEVEL } }
-            - name: AWS_REGION
-              valueFrom: { configMapKeyRef: { name: topchoice-config, key: AWS_REGION } }
+            - name: GCP_PROJECT_ID
+              valueFrom: { configMapKeyRef: { name: topchoice-config, key: GCP_PROJECT_ID } }
+            - name: GCP_REGION
+              valueFrom: { configMapKeyRef: { name: topchoice-config, key: GCP_REGION } }
             - name: KAFKA_BOOTSTRAP_SERVERS
               valueFrom: { configMapKeyRef: { name: topchoice-config, key: KAFKA_BOOTSTRAP_SERVERS } }
             - name: SERVICE_URL_IDENTITY
               valueFrom: { configMapKeyRef: { name: topchoice-config, key: SERVICE_URL_IDENTITY } }
+            # لا توجد في GCP خدمة بريد أصلية إطلاقًا، فالمزوّد خارجي
+            # (SendGrid). الأثر عملي لا شكلي: إرسال البريد صار يعتمد على
+            # مفتاح API يخرج عبر Cloud NAT، لا على هوية سحابية داخلية —
+            # ولهذا هو السرّ الوحيد هنا الذي لا يحميه Workload Identity.
+            - name: SENDGRID_API_KEY
+              valueFrom: { secretKeyRef: { name: topchoice-app, key: SENDGRID_API_KEY } }
           resources:
             requests:
               cpu: 100m

@@ -12,8 +12,8 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  REGISTRY: ${{ secrets.ECR_REGISTRY }}
-  AWS_REGION: me-south-1
+  REGISTRY: me-central1-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/topchoice
+  GCP_REGION: me-central1
 
 jobs:
   # ------------------------------------------------------------------ detect
@@ -191,13 +191,18 @@ jobs:
         with:
           terraform_version: 1.9.8
 
+      - name: terraform init
+        # -backend=false: التحقق لا يحتاج قراءة الحالة من GCS ولا أي هوية،
+        # فيمرّ على PR قادم من fork حيث لا تُمنح الأسرار أصلًا.
+        # التهيئة تسحب hashicorp/google و google-beta فقط — أي مزوّد طرف
+        # ثالث يتسلّل إلى الإعداد سيُسقط هذه الخطوة هنا لا في الإنتاج.
+        run: terraform -chdir=infra/terraform init -backend=false -input=false
+
       - name: terraform fmt
         run: terraform -chdir=infra/terraform fmt -check -recursive
 
       - name: terraform validate
-        run: |
-          terraform -chdir=infra/terraform init -backend=false -input=false
-          terraform -chdir=infra/terraform validate
+        run: terraform -chdir=infra/terraform validate
 
       - name: kustomize build
         run: |

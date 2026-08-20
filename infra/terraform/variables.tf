@@ -1,7 +1,12 @@
-variable "aws_region" {
-  description = "المنطقة الرئيسية. me-south-1 (البحرين) أقرب زمنًا لعملاء الخليج."
+variable "project_id" {
+  description = "معرّف مشروع Google Cloud. لا قيمة افتراضية — خطأ صريح أفضل من نشر في المشروع الغلط."
   type        = string
-  default     = "me-south-1"
+}
+
+variable "project_name" {
+  description = "بادئة تسمية كل الموارد"
+  type        = string
+  default     = "topchoice"
 }
 
 variable "environment" {
@@ -15,162 +20,265 @@ variable "environment" {
   }
 }
 
-variable "project" {
-  type    = string
-  default = "topchoice"
+variable "region" {
+  description = "المنطقة الرئيسية. me-central1 (الدوحة) أقرب مناطق Google زمنًا لمصر والخليج."
+  type        = string
+  default     = "me-central1"
 }
 
 variable "owner" {
-  description = "الفريق المسؤول — يظهر في الوسوم وتقارير التكلفة"
+  description = "الفريق المسؤول — يظهر في labels وتقارير التكلفة"
   type        = string
   default     = "platform-team"
 }
 
 # ------------------------------------------------------------------- network
 
-variable "vpc_cidr" {
-  type    = string
-  default = "10.0.0.0/16"
+variable "subnet_cidr" {
+  description = "النطاق الأساسي للعقد"
+  type        = string
+  default     = "10.0.0.0/20"
 }
 
-variable "az_count" {
-  description = "عدد نطاقات التوفر. 3 هو الحد الأدنى لتحمّل سقوط نطاق كامل."
-  type        = number
-  default     = 3
+variable "pods_cidr" {
+  description = <<-EOT
+    النطاق الثانوي للـ Pods. GKE يخصّص /24 لكل عقدة افتراضيًا، فـ /16 يكفي
+    ٢٥٦ عقدة. توسيعه لاحقًا ممكن لكن تقليصه مستحيل — نبدأ كبيرًا.
+  EOT
+  type        = string
+  default     = "10.4.0.0/16"
+}
+
+variable "services_cidr" {
+  description = "النطاق الثانوي لخدمات Kubernetes (ClusterIP)"
+  type        = string
+  default     = "10.8.0.0/20"
+}
+
+variable "master_cidr" {
+  description = "نطاق /28 لمستوى التحكّم المُدار. لا يتقاطع مع أي نطاق آخر."
+  type        = string
+  default     = "172.16.0.0/28"
+}
+
+variable "authorized_networks" {
+  description = "النطاقات المسموح لها بالوصول لواجهة مستوى التحكّم"
+  type = list(object({
+    cidr_block   = string
+    display_name = string
+  }))
+  default = []
+}
+
+# ----------------------------------------------------------------------- gke
+
+variable "gke_release_channel" {
+  description = "قناة الإصدار: REGULAR توازن بين الحداثة والاستقرار"
+  type        = string
+  default     = "REGULAR"
 
   validation {
-    condition     = var.az_count >= 2 && var.az_count <= 4
-    error_message = "az_count must be between 2 and 4."
+    condition     = contains(["RAPID", "REGULAR", "STABLE"], var.gke_release_channel)
+    error_message = "gke_release_channel must be RAPID, REGULAR or STABLE."
   }
 }
 
-variable "single_nat_gateway" {
-  description = "NAT واحد يوفّر ~90$/شهر لكنه نقطة فشل واحدة — للتطوير فقط"
-  type        = bool
-  default     = false
+variable "node_machine_type" {
+  description = <<-EOT
+    عائلة T2A/C4A من معالجات Arm (Axion/Ampere) تعطي أداءً لكل جنيه أفضل
+    بنحو ٢٠٪ لأحمال Java و Node. الصور في هذا المشروع تُبنى multi-arch.
+  EOT
+  type        = string
+  default     = "t2a-standard-4"
 }
 
-# ----------------------------------------------------------------------- eks
-
-variable "kubernetes_version" {
-  type    = string
-  default = "1.31"
-}
-
-variable "node_instance_types" {
-  description = "Graviton (arm64) — أداء/سعر أفضل ~20% لأحمال Java و Node"
-  type        = list(string)
-  default     = ["m7g.large", "m7g.xlarge", "c7g.large"]
-}
-
-variable "node_desired_size" {
-  type    = number
-  default = 3
-}
-
-variable "node_min_size" {
-  type    = number
-  default = 2
-}
-
-variable "node_max_size" {
-  type    = number
-  default = 20
-}
-
-variable "enable_spot" {
-  description = "خلط Spot مع On-Demand عبر Karpenter"
-  type        = bool
-  default     = true
-}
-
-# ----------------------------------------------------------------- databases
-
-variable "aurora_instance_class" {
-  type    = string
-  default = "db.r6g.large"
-}
-
-variable "aurora_replica_count" {
-  type    = number
-  default = 1
-}
-
-variable "aurora_backup_retention_days" {
-  type    = number
-  default = 7
-}
-
-variable "documentdb_instance_class" {
-  type    = string
-  default = "db.r6g.large"
-}
-
-variable "documentdb_instance_count" {
-  type    = number
-  default = 2
-}
-
-variable "redis_node_type" {
-  type    = string
-  default = "cache.t4g.medium"
-}
-
-variable "redis_shards" {
-  type    = number
-  default = 2
-}
-
-variable "redis_replicas_per_shard" {
-  type    = number
-  default = 1
-}
-
-# --------------------------------------------------------------------- kafka
-
-variable "msk_broker_instance_type" {
-  type    = string
-  default = "kafka.m7g.large"
-}
-
-variable "msk_broker_count" {
-  description = "يجب أن يكون مضاعفًا لعدد نطاقات التوفر"
+variable "node_count" {
+  description = "عدد العقد الأولي لكل منطقة فرعية في المجمّع الافتراضي"
   type        = number
-  default     = 3
+  default     = 1
 }
 
-variable "msk_volume_size_gb" {
+variable "node_min_count" {
+  type    = number
+  default = 1
+}
+
+variable "node_max_count" {
+  type    = number
+  default = 8
+}
+
+variable "node_disk_size_gb" {
   type    = number
   default = 100
 }
 
-# ---------------------------------------------------------------- opensearch
-
-variable "opensearch_instance_type" {
-  type    = string
-  default = "r6g.large.search"
+variable "enable_spot" {
+  description = "عقد Spot: أرخص ٦٠–٩١٪ مقابل إخلاء بإشعار ٣٠ ثانية. لا تصلح للحالة الثابتة."
+  type        = bool
+  default     = true
 }
 
-variable "opensearch_instance_count" {
+variable "enable_node_auto_provisioning" {
+  description = <<-EOT
+    بديل Karpenter على GKE. يُنشئ مجمّعات عقد بأشكال جديدة عند الحاجة بدل
+    حصرنا في نوع آلة واحد اخترناه مسبقًا.
+  EOT
+  type        = bool
+  default     = true
+}
+
+variable "nap_max_cpu" {
+  description = "سقف vCPU الذي يسمح للتوفير التلقائي بالوصول إليه"
+  type        = number
+  default     = 64
+}
+
+variable "nap_max_memory_gb" {
   type    = number
-  default = 3
+  default = 256
 }
 
-# ------------------------------------------------------------------ frontend
+# ----------------------------------------------------------------- databases
 
-variable "domain_name" {
-  description = "النطاق الرئيسي. اتركه فارغًا لتخطي Route 53 و ACM."
+variable "cloudsql_tier" {
+  description = "فئة نسخة Cloud SQL"
   type        = string
-  default     = ""
+  default     = "db-custom-2-7680"
 }
 
-variable "enable_waf" {
+variable "cloudsql_availability_type" {
+  description = "REGIONAL يعطي نسخة احتياطية ساخنة في منطقة فرعية أخرى، بضعف التكلفة."
+  type        = string
+  default     = "REGIONAL"
+
+  validation {
+    condition     = contains(["ZONAL", "REGIONAL"], var.cloudsql_availability_type)
+    error_message = "cloudsql_availability_type must be ZONAL or REGIONAL."
+  }
+}
+
+variable "cloudsql_disk_size_gb" {
+  type    = number
+  default = 50
+}
+
+variable "cloudsql_backup_retention_days" {
+  type    = number
+  default = 7
+}
+
+variable "cloudsql_enable_read_replica" {
+  description = "نسخة قارئة لتحميل تقارير لوحة التحكم بعيدًا عن مسار الشراء"
+  type        = bool
+  default     = true
+}
+
+variable "cloudsql_deletion_protection" {
   type    = bool
   default = true
 }
 
-variable "enable_personalize" {
-  description = "إنشاء موارد Amazon Personalize (مكلفة — أطفئها في dev)"
+variable "redis_shard_count" {
+  description = "عدد الأجزاء في Memorystore for Redis Cluster"
+  type        = number
+  default     = 3
+}
+
+variable "redis_replica_count" {
+  description = "نسخ قارئة لكل جزء"
+  type        = number
+  default     = 1
+}
+
+variable "mongodb_atlas_service_attachments" {
+  description = <<-EOT
+    مرفقات خدمة Private Service Connect التي تعطيها MongoDB Atlas عند إنشاء
+    نقطة اتصال خاصة. تُترك فارغة حتى يُنشأ عنقود Atlas — انظر
+    docs/06-deployment-gke.md. السبب في ADR 0003: لا تقدّم Google خدمة
+    MongoDB مُدارة، والانتقال إلى Firestore يعني إعادة كتابة catalog-service.
+  EOT
+  type        = list(string)
+  default     = []
+}
+
+# --------------------------------------------------------------------- kafka
+
+variable "kafka_vcpu_count" {
+  description = "إجمالي vCPU لعنقود Managed Service for Apache Kafka (٣ كحد أدنى)"
+  type        = number
+  default     = 3
+}
+
+variable "kafka_memory_gb" {
+  description = "الذاكرة بالجيجابايت — بين ١ و ٨ أضعاف عدد vCPU"
+  type        = number
+  default     = 12
+}
+
+variable "kafka_partitions" {
+  description = "عدد الأقسام لكل موضوع. القسم وحدة التوازي — لا يمكن تقليصه لاحقًا."
+  type        = number
+  default     = 6
+}
+
+variable "kafka_replication_factor" {
+  type    = number
+  default = 3
+}
+
+# ---------------------------------------------------------------- opensearch
+
+variable "opensearch_node_count" {
+  description = <<-EOT
+    عدد عقد OpenSearch على GKE. لا تقدّم Google خدمة OpenSearch مُدارة، فنشغّله
+    كـ StatefulSet. الرقم هنا يُمرَّر للـ overlay ويظهر في المخرجات.
+  EOT
+  type        = number
+  default     = 3
+}
+
+variable "opensearch_disk_size_gb" {
+  type    = number
+  default = 100
+}
+
+# ------------------------------------------------------------------- frontend
+
+variable "domain_name" {
+  description = "النطاق الرئيسي. اتركه فارغًا لتخطي Cloud DNS والشهادة المُدارة."
+  type        = string
+  default     = ""
+}
+
+variable "enable_cloud_armor" {
+  description = "سياسة Cloud Armor: حماية من DDoS وقواعد OWASP الجاهزة"
+  type        = bool
+  default     = true
+}
+
+variable "enable_retail_ai" {
+  description = "موارد Vertex AI Search for commerce (مكلفة — أطفئها في dev)"
   type        = bool
   default     = false
+}
+
+variable "cdn_default_ttl" {
+  description = "مدة بقاء الاستجابة في Cloud CDN بالثواني"
+  type        = number
+  default     = 3600
+}
+
+# -------------------------------------------------------------- خط النشر
+
+variable "github_owner" {
+  description = "مالك المستودع على GitHub — يقيّد اتحاد الهوية به"
+  type        = string
+  default     = "ahmedselimmansor-ctrl"
+}
+
+variable "github_repository" {
+  description = "المستودع بصيغة owner/repo. أي فرع خارجه لا يستطيع انتحال هوية النشر."
+  type        = string
+  default     = "ahmedselimmansor-ctrl/ecomerce-microservices"
 }

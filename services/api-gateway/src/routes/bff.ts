@@ -196,7 +196,7 @@ export async function bffRoutes(app: FastifyInstance): Promise<void> {
   });
 
   /**
-   * تتبّع تفاعلات المستخدم لتغذية Amazon Personalize.
+   * تتبّع تفاعلات المستخدم لتغذية Vertex AI Search for commerce.
    * الرد `202` فورًا: التتبّع يجب ألا يبطّئ التصفّح إطلاقًا.
    */
   app.post('/api/v1/bff/track', { preHandler: [app.optionalAuth] }, async (req, reply) => {

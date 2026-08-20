@@ -15,7 +15,7 @@ import org.springframework.data.mongodb.core.index.TextIndexDefinition;
 /**
  * إنشاء الفهارس صراحةً عند الإقلاع بدل {@code auto-index-creation}،
  * لأن الإنشاء التلقائي يخفي تكلفة الفهارس ويفاجئك في الإنتاج.
- * على Amazon DocumentDB يجب التأكد من دعم كل نوع فهرس في نسخة المحرك.
+ * على MongoDB Atlas يجب التأكد من دعم كل نوع فهرس في فئة العنقود المختارة.
  */
 @Configuration
 public class MongoIndexInitializer {

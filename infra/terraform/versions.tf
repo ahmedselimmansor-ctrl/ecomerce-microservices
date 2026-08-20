@@ -2,17 +2,13 @@ terraform {
   required_version = ">= 1.9.0"
 
   required_providers {
-    aws = {
-      source  = "hashicorp/aws"
-      version = "~> 5.70"
+    google = {
+      source  = "hashicorp/google"
+      version = "~> 6.0"
     }
-    kubernetes = {
-      source  = "hashicorp/kubernetes"
-      version = "~> 2.33"
-    }
-    helm = {
-      source  = "hashicorp/helm"
-      version = "~> 2.16"
+    google-beta = {
+      source  = "hashicorp/google-beta"
+      version = "~> 6.0"
     }
     random = {
       source  = "hashicorp/random"
@@ -20,50 +16,80 @@ terraform {
     }
   }
 
-  # الحالة في S3 مع قفل عبر DynamoDB — شرط أساسي للعمل الجماعي.
-  # فعّل هذا بعد إنشاء الـ bucket والجدول يدويًا مرة واحدة.
-  # backend "s3" {
-  #   bucket         = "topchoice-tfstate-<account-id>"
-  #   key            = "platform/terraform.tfstate"
-  #   region         = "me-south-1"
-  #   dynamodb_table = "topchoice-tf-locks"
-  #   encrypt        = true
-  # }
-}
-
-provider "aws" {
-  region = var.aws_region
-
-  default_tags {
-    tags = {
-      Project     = "topchoice-clone"
-      Environment = var.environment
-      ManagedBy   = "terraform"
-      Owner       = var.owner
-    }
+  /*
+   * الحالة في Cloud Storage لا على القرص المحلي: الحالة على جهاز مطوّر تعني أن
+   * زميلًا يطبّق تغييرًا لا يرى ما فعله الآخر. دلو GCS يوفّر القفل تلقائيًا عبر
+   * generation preconditions، فلا نحتاج جدول أقفال منفصلًا كما كان الحال مع
+   * S3 + DynamoDB.
+   *
+   * القيم تُمرَّر عند التهيئة لأن backend لا يقبل متغيّرات:
+   *   terraform init -backend-config="bucket=topchoice-tfstate-<project>"
+   */
+  backend "gcs" {
+    prefix = "terraform/state"
   }
 }
 
-provider "kubernetes" {
-  host                   = module.eks.cluster_endpoint
-  cluster_ca_certificate = base64decode(module.eks.cluster_ca_certificate)
+provider "google" {
+  project = var.project_id
+  region  = var.region
 
-  exec {
-    api_version = "client.authentication.k8s.io/v1beta1"
-    command     = "aws"
-    args        = ["eks", "get-token", "--cluster-name", module.eks.cluster_name, "--region", var.aws_region]
-  }
+  default_labels = local.labels
 }
 
-provider "helm" {
-  kubernetes {
-    host                   = module.eks.cluster_endpoint
-    cluster_ca_certificate = base64decode(module.eks.cluster_ca_certificate)
+provider "google-beta" {
+  project = var.project_id
+  region  = var.region
 
-    exec {
-      api_version = "client.authentication.k8s.io/v1beta1"
-      command     = "aws"
-      args        = ["eks", "get-token", "--cluster-name", module.eks.cluster_name, "--region", var.aws_region]
-    }
+  default_labels = local.labels
+}
+
+# ----------------------------------------------------------------- معطيات عامة
+
+data "google_project" "current" {}
+
+data "google_client_config" "current" {}
+
+locals {
+  name = "${var.project_name}-${var.environment}"
+
+  /*
+   * labels في Google Cloud ليست tags في AWS: المفتاح والقيمة يقبلان الأحرف
+   * الصغيرة والأرقام و«-» و«_» فقط. أي حرف كبير أو مسافة يرفضه المزوّد وقت
+   * التطبيق لا وقت التحقق، فنلتزم بالتنميط هنا مرة واحدة.
+   */
+  labels = {
+    app         = lower(var.project_name)
+    environment = lower(var.environment)
+    owner       = lower(var.owner)
+    managed-by  = "terraform"
   }
+
+  /*
+   * الخدمات التي تحتاج هوية Google. المفتاح هو اسم حساب خدمة Kubernetes،
+   * والقيمة معرّف حساب خدمة Google.
+   *
+   * المعرّفات مختصرة عمدًا لا مشتقّة من اسم الخدمة: سقف Google هو ٣٠ حرفًا،
+   * و«topchoice-recommendation-service» يتجاوزه فيُبتر بصمت إلى اسم مشوّه لا
+   * يطابق ما في تعريفات Kubernetes — والربط يفشل وقت التشغيل لا وقت التطبيق،
+   * وهو أسوأ وقت لاكتشافه.
+   */
+  workload_identity_services = {
+    api-gateway            = "tc-api-gateway"
+    catalog-service        = "tc-catalog"
+    order-service          = "tc-order"
+    notification-service   = "tc-notification"
+    recommendation-service = "tc-recommendation"
+  }
+
+  # قواعد بيانات PostgreSQL — واحدة لكل خدمة تملك بياناتها
+  postgres_databases = ["identity", "order", "payment", "inventory"]
+
+  kafka_topics = [
+    "order.events.v1",
+    "inventory.events.v1",
+    "payment.events.v1",
+    "catalog.product.v1",
+    "notification.commands.v1",
+  ]
 }

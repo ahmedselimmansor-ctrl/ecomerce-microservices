@@ -8,9 +8,10 @@
 | Node.js | 22+ | اختياري — لتشغيل الواجهة خارج Docker |
 | Python | 3.12+ | اختياري |
 | Java | — | **غير مطلوب**: خدمات Java تُبنى داخل Docker |
-| kubectl / terraform | — | للنشر على AWS فقط |
+| gcloud CLI | — | **غير مطلوب محليًا**: المحاكيات حاويات مستقلة، ولا نتصل بـ Google Cloud إطلاقًا أثناء التطوير |
+| kubectl / terraform | — | للنشر على Google Cloud فقط |
 
-**الموارد:** 8 GB RAM على الأقل (12 GB مريح). المنصة تشغّل 17 حاوية.
+**الموارد:** 8 GB RAM على الأقل (12 GB مريح). المنصة تشغّل 22 حاوية.
 
 ---
 
@@ -62,9 +63,49 @@ make clean                     # إيقاف + حذف كل البيانات
 
 ---
 
-## 5. تطوير خدمة بعينها
+## 5. محاكيات Google Cloud محليًا
 
-### 5.1 خدمة Java
+خدمات Google المُدارة لا تعمل على جهازك، ولا يوجد محاكي واحد يغطيها كلها: Google تنشر **محاكيًا منفصلًا لكل خدمة**، وبعض الخدمات بلا محاكي أصلًا. لذلك ثلاث حاويات لا واحدة:
+
+| المحاكي | الحاوية | المنفذ | يقابل |
+|---|---|---|---|
+| Pub/Sub | `pubsub-emulator` | 8681 | Pub/Sub (topics + subscriptions) |
+| Firestore | `firestore-emulator` | 8091 | Firestore in Native mode |
+| fake-gcs-server | `fake-gcs` | 4443 | Cloud Storage |
+
+**لماذا لا يحتاج كود الخدمة مسارًا «محليًا» منفصلًا:** مكتبات Google العميلة — بايثون وNode وJava — تقرأ هذه المتغيرات بنفسها وتوجّه كل النداءات إلى المحاكي بدل الـ endpoint الحقيقي، وتتخطى المصادقة تمامًا:
+
+```bash
+PUBSUB_EMULATOR_HOST=pubsub-emulator:8681
+FIRESTORE_EMULATOR_HOST=firestore-emulator:8091
+STORAGE_EMULATOR_HOST=http://fake-gcs:4443     # هذا وحده يحتاج المخطط (scheme)
+GOOGLE_CLOUD_PROJECT=topchoice-local
+```
+
+احذف المتغير ⇒ تتحدث الخدمة مع Google Cloud الحقيقية بالهوية الافتراضية. هذا هو المفتاح الوحيد للتبديل، ولا يوجد فرع `if (local)` في أي خدمة.
+
+### 5.1 ما لا يوجد له محاكي
+
+| الخدمة | البديل محليًا | السبب |
+|---|---|---|
+| Secret Manager | `.env` | لا محاكي رسمي. الأسرار محليًا تطويرية ومعلَن ذلك في `.env.example` |
+| Vertex AI Search for commerce (Retail API) | المحرك الاحتياطي الداخلي | `RETAIL_SERVING_CONFIG_*` فارغة ⇒ التوصيات تُحسب من شعبية Redis. المسار الاحتياطي مُختبَر يوميًا بهذا |
+| SendGrid | Mailpit | نريد قراءة الإيميل لا إرساله؛ Mailpit يعرضه على 8025 |
+| Cloud SQL / Memorystore / Managed Kafka | حاويات `postgres` و`redis` و`kafka` | بروتوكولات مفتوحة — الحاوية هي نفس المحرك، لا محاكاة له |
+
+### 5.2 حدود المحاكيات — اقرأ هذا قبل أن تتفاجأ
+
+المحاكي يطابق الـ API لا السلوك التشغيلي. ثلاثة فروق تسبب أخطاء حقيقية:
+
+1. **محاكي Firestore لا ينفّذ TTL إطلاقًا.** المستندات المنتهية تبقى إلى الأبد. في الإنتاج تُحذف خلال 24 ساعة من `expiresAt` لا في لحظتها بالضبط. النتيجة واحدة في الحالتين: **الكود يفحص `expiresAt` بنفسه ولا يعتمد على الحذف** — انظر [03 — نماذج البيانات](03-data-model.md).
+2. **لا شيء يبقى بعد `make clean`.** المحاكيات تبدأ فارغة تمامًا: لا مواضيع Pub/Sub ولا فهارس Firestore ولا دلاء. سكربت التهيئة ينشئها عند كل إقلاع.
+3. **لا صلاحيات ولا IAM.** كل نداء ينجح. غياب دور مطلوب لن يظهر محليًا أبدًا، بل عند أول نشر — ولهذا نضبط الأدوار في Terraform لا يدويًا.
+
+---
+
+## 6. تطوير خدمة بعينها
+
+### 6.1 خدمة Java
 
 ```bash
 # شغّل البنية التحتية فقط
@@ -80,7 +121,7 @@ mvn spring-boot:run
 
 > **انتبه للمنفذ:** Kafka يعلن عن نفسه على `kafka:9092` داخل شبكة Docker و`localhost:29092` خارجها.
 
-### 5.2 خدمة Node
+### 6.2 خدمة Node
 
 ```bash
 make infra-up
@@ -88,10 +129,14 @@ cd services/api-gateway
 npm install
 REDIS_URL=redis://localhost:6379 \
 JWT_SECRET=local-dev-only-change-me-9f2b7c1d4e6a8b0c2d4e6f8a0b2c4d6e \
+FIRESTORE_EMULATOR_HOST=localhost:8091 \
+GOOGLE_CLOUD_PROJECT=topchoice-local \
 npm run dev
 ```
 
-### 5.3 الواجهة
+> **نفس مصيدة المنفذ:** المحاكيات تُعلَن بأسماء الحاويات داخل الشبكة (`firestore-emulator:8091`) وبـ `localhost` خارجها. خدمة تعمل من الـ IDE وتقرأ `.env` كما هو ستحاول حلّ اسم مضيف غير موجود وتفشل بـ `ENOTFOUND`.
+
+### 6.3 الواجهة
 
 ```bash
 cd frontend/web
@@ -101,7 +146,7 @@ NEXT_PUBLIC_API_URL=http://localhost:8080 npm run dev
 
 ---
 
-## 6. أخطاء شائعة وحلولها
+## 7. أخطاء شائعة وحلولها
 
 | العرَض | السبب | الحل |
 |---|---|---|
@@ -110,13 +155,17 @@ NEXT_PUBLIC_API_URL=http://localhost:8080 npm run dev
 | البحث يرجّع 0 نتيجة | الفهرس لم يُبنَ بعد | انتظر 10 ثوانٍ أو `make restart S=search-service` |
 | الطلب عالق في `PENDING` | مستهلك Kafka متوقف | `make logs S=inventory-service` وابحث عن `DLQ` |
 | الطلب `CANCELLED` بلا سبب واضح | البوابة الوهمية ترفض 10% عمدًا | اضبط `PAYMENT_MOCK_FAILURE_RATE=0` في `.env` |
+| `could not automatically determine credentials` | المتغير `*_EMULATOR_HOST` لم يصل للحاوية، فالمكتبة تحاول المصادقة مع Google الحقيقية | تأكد أن الخدمة ترث المتغير من `.env`، وأعد تشغيلها |
+| `NOT_FOUND: Topic not found` | محاكي Pub/Sub أُعيد تشغيله ففقد مواضيعه | `make restart S=pubsub-emulator` يعيد تشغيل سكربت التهيئة |
+| مستند منتهي الصلاحية ما زال يُقرأ | المحاكي لا ينفّذ TTL | هذا متوقّع — الكود يفحص `expiresAt` بنفسه |
+| `ENOTFOUND firestore-emulator` | تشغّل الخدمة خارج Docker بقيم داخل-الشبكة | استبدل أسماء الحاويات بـ `localhost` (انظر 6.2) |
 | `port is already allocated` | خدمة أخرى تستخدم المنفذ | `make down` ثم أعد المحاولة |
 | Java build بطيء جدًا | تحميل اعتماديات Maven | مؤقت — الـ cache mount يسرّع ما بعده |
-| نفاد الذاكرة | 17 حاوية | ارفع حد ذاكرة Docker أو استخدم `make infra-up` وشغّل ما تحتاجه |
+| نفاد الذاكرة | 22 حاوية | ارفع حد ذاكرة Docker أو استخدم `make infra-up` وشغّل ما تحتاجه |
 
 ---
 
-## 7. الوصول لقواعد البيانات
+## 8. الوصول للمخازن والمحاكيات
 
 ```bash
 # PostgreSQL
@@ -144,9 +193,36 @@ docker compose -f deploy/docker-compose.yml --env-file .env exec redis \
 curl -s 'http://localhost:9200/products-v1/_count'
 ```
 
+**المحاكيات تتكلم نفس REST API الحقيقي، فـ `curl` وحده يكفي للتشخيص — لا حاجة لـ SDK ولا CLI:**
+
+```bash
+# Pub/Sub — المواضيع والاشتراكات الموجودة
+curl -s http://localhost:8681/v1/projects/topchoice-local/topics | python3 -m json.tool
+curl -s http://localhost:8681/v1/projects/topchoice-local/subscriptions | python3 -m json.tool
+
+# سحب رسالة يدويًا (مفيد حين لا يصل الإشعار)
+curl -s -X POST -H 'content-type: application/json' -d '{"maxMessages":5}' \
+  'http://localhost:8681/v1/projects/topchoice-local/subscriptions/topchoice-notifications-sub:pull' \
+  | python3 -m json.tool
+
+# Firestore — مفاتيح الـ idempotency
+curl -s 'http://localhost:8091/v1/projects/topchoice-local/databases/(default)/documents/idempotency' \
+  | python3 -m json.tool
+
+# Firestore — تصفير كامل بلا إعادة تشغيل الحاوية
+curl -s -X DELETE 'http://localhost:8091/emulator/v1/projects/topchoice-local/databases/(default)/documents'
+
+# Cloud Storage — الدلاء ومحتوياتها
+curl -s 'http://localhost:4443/storage/v1/b?project=topchoice-local' | python3 -m json.tool
+curl -s 'http://localhost:4443/storage/v1/b/topchoice-media-local/o' | python3 -m json.tool
+
+# تنزيل ملف مباشرةً — نفس المسار الذي تستخدمه الواجهة كـ CDN محلي
+curl -s -o /dev/null -w '%{http_code}\n' http://localhost:4443/topchoice-media-local/placeholder.jpg
+```
+
 ---
 
-## 8. تتبّع الـ Saga خطوة بخطوة
+## 9. تتبّع الـ Saga خطوة بخطوة
 
 أفضل طريقة لفهم النظام: أنشئ طلبًا وراقب الأحداث.
 
@@ -177,9 +253,11 @@ curl -s -X POST localhost:8080/api/v1/orders \
 
 ستشاهد التسلسل: `order.created` → `inventory.reserved` → `payment.requested` → `payment.authorized` → `order.confirmed`، وإيميل التأكيد في Mailpit.
 
+> **انتبه للفصل:** Kafka هو ناقل الـ Saga، وPub/Sub هو ناقل ما يخرج منها (الإشعارات، التحليلات). أرسل الحدث نفسه إلى الاثنين وستحصل على إيميل مزدوج.
+
 ---
 
-## 9. تجربة سيناريوهات الفشل
+## 10. تجربة سيناريوهات الفشل
 
 ```bash
 # فشل الدفع دائمًا ⇒ يجب أن يُلغى الطلب ويُحرَّر المخزون
@@ -196,11 +274,15 @@ curl -s localhost:8080/api/v1/bff/pdp/TC-APL-IP15-128-BLK | python3 -c "
 import sys,json; d=json.load(sys.stdin)
 print('product ok:', bool(d['product']))
 print('recommended:', len(d['recommended']))"
+
+# سقوط محاكي Firestore ⇒ الطلبات تعمل، لكن حماية التكرار تسقط
+# جرّبها لتفهم لماذا لا نعتبر Firestore تبعية اختيارية في مسار الطلب
+docker compose -f deploy/docker-compose.yml --env-file .env stop firestore-emulator
 ```
 
 ---
 
-## 10. الاختبارات
+## 11. الاختبارات
 
 ```bash
 make test     # وحدات كل الخدمات (داخل حاويات)

@@ -95,7 +95,7 @@ export default async function ProductPage({ params }: PageProps) {
         <ProductGrid
           products={recommended}
           title="يُشترى عادةً معه"
-          subtitle="Amazon Personalize"
+          subtitle="Vertex AI Search"
         />
       )}
 

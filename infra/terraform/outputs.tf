@@ -1,122 +1,138 @@
 # ============================================================================
-#  المخرجات — تُستهلك من CI/CD وسكربتات النشر
+#  المخرجات — ما تحتاجه الخطوات التالية بعد apply
 # ============================================================================
 
 output "cluster_name" {
-  description = "اسم عنقود EKS"
-  value       = module.eks.cluster_name
+  description = "اسم عنقود GKE"
+  value       = google_container_cluster.main.name
 }
 
 output "cluster_endpoint" {
-  value = module.eks.cluster_endpoint
+  description = "عنوان مستوى التحكّم"
+  value       = google_container_cluster.main.endpoint
+  sensitive   = true
 }
 
 output "kubeconfig_command" {
-  description = "أمر ربط kubectl بالعنقود"
-  value       = "aws eks update-kubeconfig --name ${module.eks.cluster_name} --region ${var.aws_region}"
+  description = "الأمر الذي يربط kubectl بالعنقود"
+  value       = "gcloud container clusters get-credentials ${google_container_cluster.main.name} --region ${var.region} --project ${var.project_id}"
 }
 
-output "ecr_registry" {
-  description = "عنوان مسجّل ECR"
-  value       = "${data.aws_caller_identity.current.account_id}.dkr.ecr.${var.aws_region}.amazonaws.com"
+output "workload_identity_pool" {
+  description = "مجمّع Workload Identity — يُستخدم في تعليقات حسابات خدمة Kubernetes"
+  value       = "${var.project_id}.svc.id.goog"
 }
 
-output "ecr_repositories" {
-  value = { for k, v in aws_ecr_repository.services : k => v.repository_url }
+output "workload_service_accounts" {
+  description = "حسابات خدمة Google لكل حمل — تُوضع في التعليق iam.gke.io/gcp-service-account"
+  value       = { for k, sa in google_service_account.workload : k => sa.email }
 }
 
-# ------------------------------------------------------------------- data
+# ------------------------------------------------------------------ البيانات
 
-output "aurora_writer_endpoint" {
-  value = aws_rds_cluster.main.endpoint
+output "postgres_connection_name" {
+  description = "اسم اتصال Cloud SQL — يُمرَّر لوكيل المصادقة"
+  value       = google_sql_database_instance.postgres.connection_name
 }
 
-output "aurora_reader_endpoint" {
-  description = "استخدمه لكل الاستعلامات القرائية لتخفيف الحمل عن الكاتب"
-  value       = aws_rds_cluster.main.reader_endpoint
+output "postgres_private_ip" {
+  description = "العنوان الخاص لنسخة PostgreSQL"
+  value       = google_sql_database_instance.postgres.private_ip_address
+  sensitive   = true
 }
 
-output "rds_proxy_endpoint" {
-  description = "نقطة الاتصال الموصى بها للتطبيقات (تجميع اتصالات + تحويل سلس)"
-  value       = aws_db_proxy.main.endpoint
+output "postgres_replica_connection_name" {
+  description = "اسم اتصال النسخة القارئة، إن وُجدت"
+  value       = var.cloudsql_enable_read_replica ? google_sql_database_instance.postgres_replica[0].connection_name : null
 }
 
-output "documentdb_endpoint" {
-  value = aws_docdb_cluster.main.endpoint
+output "postgres_databases" {
+  description = "قواعد البيانات المُنشأة"
+  value       = [for db in google_sql_database.app : db.name]
 }
 
-output "redis_configuration_endpoint" {
-  value = aws_elasticache_replication_group.main.configuration_endpoint_address
+output "redis_discovery_endpoint" {
+  description = "نقطة اكتشاف عنقود Redis"
+  value       = google_redis_cluster.main.discovery_endpoints
+  sensitive   = true
 }
 
-output "msk_bootstrap_brokers_iam" {
-  description = "عناوين Kafka بمصادقة IAM (المستخدمة من الخدمات)"
-  value       = aws_msk_cluster.main.bootstrap_brokers_sasl_iam
+output "firestore_database" {
+  description = "قاعدة Firestore للجلسات ومفاتيح تعطيل التكرار"
+  value       = google_firestore_database.main.name
 }
 
-output "opensearch_endpoint" {
-  value = aws_opensearch_domain.main.endpoint
+# ------------------------------------------------------------------ الأحداث
+
+output "kafka_bootstrap" {
+  description = "عنوان bootstrap لعنقود Kafka"
+  value       = "bootstrap.${google_managed_kafka_cluster.main.cluster_id}.${var.region}.managedkafka.${var.project_id}.cloud.goog:9092"
 }
 
-# ------------------------------------------------------------------- edge
-
-output "cloudfront_domain" {
-  value = aws_cloudfront_distribution.main.domain_name
+output "kafka_topics" {
+  description = "المواضيع المُنشأة"
+  value       = [for t in google_managed_kafka_topic.topics : t.topic_id]
 }
 
-output "cloudfront_distribution_id" {
-  description = "لازم لإبطال الكاش بعد النشر"
-  value       = aws_cloudfront_distribution.main.id
+output "pubsub_notifications_topic" {
+  description = "موضوع الإشعارات"
+  value       = google_pubsub_topic.notifications.name
+}
+
+# ------------------------------------------------------------------- الحافة
+
+output "ingress_ip" {
+  description = "عنوان anycast العالمي — وجّه إليه سجلات DNS الخارجية"
+  value       = google_compute_global_address.ingress.address
+}
+
+output "ingress_address_name" {
+  description = "اسم العنوان — يُشار إليه في تعليق Ingress"
+  value       = google_compute_global_address.ingress.name
+}
+
+output "cloud_armor_policy" {
+  description = "اسم سياسة Cloud Armor — يُشار إليه في BackendConfig"
+  value       = var.enable_cloud_armor ? google_compute_security_policy.main[0].name : null
 }
 
 output "media_bucket" {
-  value = aws_s3_bucket.media.bucket
+  description = "دلو الوسائط"
+  value       = google_storage_bucket.media.name
 }
 
-output "site_url" {
-  value = var.domain_name != "" ? "https://${var.domain_name}" : "https://${aws_cloudfront_distribution.main.domain_name}"
+output "dns_name_servers" {
+  description = "خوادم الأسماء — سجّلها عند مُسجّل النطاق"
+  value       = var.domain_name != "" ? google_dns_managed_zone.main[0].name_servers : []
 }
 
-# ------------------------------------------------------------------- iam
+# ------------------------------------------------------------------ المنصّة
 
-output "app_irsa_role_arn" {
-  description = "يُشار إليه في annotation الخاص بالـ ServiceAccount"
-  value       = module.app_irsa.iam_role_arn
+output "artifact_registry" {
+  description = "عنوان المستودع — بادئة كل صورة"
+  value       = "${var.region}-docker.pkg.dev/${var.project_id}/${google_artifact_registry_repository.docker.repository_id}"
 }
 
-output "external_secrets_role_arn" {
-  value = module.external_secrets_irsa.iam_role_arn
+output "deployer_service_account" {
+  description = "حساب خدمة النشر — يُوضع في أسرار GitHub Actions"
+  value       = google_service_account.deployer.email
 }
 
-output "lb_controller_role_arn" {
-  value = module.lb_controller_irsa.iam_role_arn
+output "workload_identity_provider" {
+  description = "المعرّف الكامل لمزوّد OIDC — يُوضع في أسرار GitHub Actions"
+  value       = google_iam_workload_identity_pool_provider.github.name
 }
 
-output "secret_arns" {
-  description = "أسرار قواعد البيانات — تُقرأ عبر External Secrets Operator"
+output "secret_names" {
+  description = "أسماء الأسرار في Secret Manager"
   value = {
-    aurora     = aws_secretsmanager_secret.aurora.arn
-    documentdb = aws_secretsmanager_secret.documentdb.arn
-    redis      = aws_secretsmanager_secret.redis.arn
+    postgres_password = google_secret_manager_secret.postgres_password.secret_id
+    mongodb_uri       = google_secret_manager_secret.mongodb_uri.secret_id
+    jwt               = google_secret_manager_secret.jwt.secret_id
   }
 }
 
-output "next_steps" {
-  value = <<-EOT
-
-    البنية التحتية جاهزة. الخطوات التالية:
-
-      1) اربط kubectl:
-         aws eks update-kubeconfig --name ${module.eks.cluster_name} --region ${var.aws_region}
-
-      2) ثبّت مكوّنات العنقود (Load Balancer Controller، External Secrets، Karpenter):
-         ./scripts/bootstrap-cluster.sh
-
-      3) ابنِ الصور وارفعها:
-         make images REGISTRY=${data.aws_caller_identity.current.account_id}.dkr.ecr.${var.aws_region}.amazonaws.com TAG=v1.0.0
-
-      4) انشر:
-         kubectl apply -k infra/k8s/overlays/${var.environment}
-
-  EOT
+output "kms_app_key" {
+  description = "مفتاح التشفير للتطبيق"
+  value       = google_kms_crypto_key.app.id
 }

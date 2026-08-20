@@ -5,7 +5,11 @@ metadata:
   namespace: topchoice
 data:
   # ---- إعدادات عامة ----
-  AWS_REGION: "me-south-1"
+  # مكتبات Google تلتقط المشروع من خادم البيانات الوصفية داخل GKE، لكننا
+  # نمرّره صراحةً ليبقى نفس الكود صالحًا في docker-compose حيث لا وجود لذلك الخادم.
+  # القيمة تُستبدل في خط الـ CI لأن dev و prod مشروعان منفصلان.
+  GCP_PROJECT_ID: "PROJECT_ID"
+  GCP_REGION: "me-central1"
   LOG_LEVEL: "INFO"
 
   # ---- اكتشاف الخدمات ----
@@ -20,12 +24,14 @@ data:
   SERVICE_URL_RECOMMENDATION: "http://recommendation-service.topchoice.svc.cluster.local:8088"
   CATALOG_URL: "http://catalog-service.topchoice.svc.cluster.local:8082"
 
-  # ---- Kafka (MSK) ----
+  # ---- Kafka (Managed Service for Apache Kafka) ----
   # القيمة الحقيقية تُحقن من مخرجات Terraform عبر overlay
-  KAFKA_BOOTSTRAP_SERVERS: "REPLACE_WITH_MSK_BOOTSTRAP"
+  KAFKA_BOOTSTRAP_SERVERS: "REPLACE_WITH_KAFKA_BOOTSTRAP"
 
   # ---- OpenSearch ----
-  OPENSEARCH_URL: "REPLACE_WITH_OPENSEARCH_ENDPOINT"
+  # لا نظير مُدارًا له في GCP، فهو يعمل كـ StatefulSet داخل العنقود نفسه
+  # (راجع 30-opensearch.yaml). النتيجة عنوان ثابت لا يحتاج حقنًا من Terraform.
+  OPENSEARCH_URL: "http://opensearch.topchoice.svc.cluster.local:9200"
   OPENSEARCH_INDEX: "products-v1"
 
   # ---- سلوك التطبيق ----
@@ -33,5 +39,5 @@ data:
   JWT_REFRESH_TTL_SECONDS: "2592000"
   DB_POOL_MAX: "15"
 
-  # مقياس مهم: عدد الـ pods × DB_POOL_MAX يجب أن يبقى تحت حد Aurora،
-  # ولهذا نمر عبر RDS Proxy الذي يوحّد التجميع.
+  # مقياس مهم: عدد الـ pods × DB_POOL_MAX يجب أن يبقى تحت حد Cloud SQL،
+  # ولهذا نمر عبر Cloud SQL Auth Proxy الذي يوحّد التجميع ويشفّر الوصلة.

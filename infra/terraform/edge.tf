@@ -1,437 +1,272 @@
 # ============================================================================
-#  الحافة: S3 · CloudFront · WAF · Route 53 · ACM
+#  الحافة — موازن الحمل العالمي والـ CDN والحماية
+#
+#  فرق جوهري عن CloudFront: موازن حمل Google عالمي بعنوان IP واحد (anycast).
+#  لا نُنشئ توزيعة CDN منفصلة أمام موازن إقليمي — الـ CDN خاصية تُفعَّل على
+#  خدمة خلفية. النتيجة قطعة واحدة أقل، ومسار واحد أقصر للطلب.
+#
+#  العنوان الثابت يُنشأ هنا، أما خدمات الخلفية فيُنشئها GKE Ingress من تعريفات
+#  Kubernetes (BackendConfig / ManagedCertificate) في infra/k8s. هذا التقسيم
+#  مقصود: ما يتبع دورة حياة التطبيق يعيش مع التطبيق.
 # ============================================================================
 
-resource "aws_s3_bucket" "media" {
-  bucket = "${local.name}-media-${data.aws_caller_identity.current.account_id}"
-  tags   = { Name = "${local.name}-media" }
+resource "google_compute_global_address" "ingress" {
+  name        = "${local.name}-ingress"
+  description = "عنوان anycast عالمي — يُشار إليه في Ingress عبر التعليق التوضيحي"
 }
 
-data "aws_caller_identity" "current" {}
+# --------------------------------------------------------------- Cloud Armor
 
-resource "aws_s3_bucket_public_access_block" "media" {
-  bucket = aws_s3_bucket.media.id
+resource "google_compute_security_policy" "main" {
+  count = var.enable_cloud_armor ? 1 : 0
 
-  # لا وصول عام مباشر: الوصول حصرًا عبر CloudFront بـ OAC
-  block_public_acls       = true
-  block_public_policy     = true
-  ignore_public_acls      = true
-  restrict_public_buckets = true
-}
+  name        = "${local.name}-armor"
+  description = "حماية الحافة: DDoS وقواعد OWASP"
+  type        = "CLOUD_ARMOR"
 
-resource "aws_s3_bucket_versioning" "media" {
-  bucket = aws_s3_bucket.media.id
-  versioning_configuration {
-    status = "Enabled"
+  adaptive_protection_config {
+    layer_7_ddos_defense_config {
+      enable = true
+    }
   }
-}
 
-resource "aws_s3_bucket_server_side_encryption_configuration" "media" {
-  bucket = aws_s3_bucket.media.id
+  /*
+   * حدّ المعدّل عند الحافة يوقف الفيضان قبل أن يستهلك عقدة أو اتصال قاعدة
+   * بيانات. بوابة الـ API تفرض حدًا أدقّ لكل مستخدم لاحقًا — الطبقتان تكمّلان
+   * بعضهما ولا تُغنيان.
+   */
+  rule {
+    action   = "rate_based_ban"
+    priority = 1000
+
+    match {
+      versioned_expr = "SRC_IPS_V1"
+      config {
+        src_ip_ranges = ["*"]
+      }
+    }
+
+    rate_limit_options {
+      conform_action = "allow"
+      exceed_action  = "deny(429)"
+
+      enforce_on_key = "IP"
+
+      rate_limit_threshold {
+        count        = 600
+        interval_sec = 60
+      }
+
+      ban_duration_sec = 300
+    }
+
+    description = "٦٠٠ طلب في الدقيقة لكل عنوان"
+  }
 
   rule {
-    apply_server_side_encryption_by_default {
-      sse_algorithm     = "aws:kms"
-      kms_master_key_id = aws_kms_key.app.arn
-    }
-    bucket_key_enabled = true # يقلّل نداءات KMS وتكلفتها بشكل كبير
-  }
-}
+    action   = "deny(403)"
+    priority = 2000
 
-resource "aws_s3_bucket_lifecycle_configuration" "media" {
-  bucket = aws_s3_bucket.media.id
+    match {
+      expr {
+        expression = "evaluatePreconfiguredExpr('sqli-v33-stable')"
+      }
+    }
+
+    description = "حقن SQL"
+  }
 
   rule {
-    id     = "intelligent-tiering"
-    status = "Enabled"
+    action   = "deny(403)"
+    priority = 2100
 
-    filter {}
-
-    transition {
-      days          = 30
-      storage_class = "INTELLIGENT_TIERING"
+    match {
+      expr {
+        expression = "evaluatePreconfiguredExpr('xss-v33-stable')"
+      }
     }
 
-    noncurrent_version_expiration {
-      noncurrent_days = 90
+    description = "XSS"
+  }
+
+  rule {
+    action   = "deny(403)"
+    priority = 2200
+
+    match {
+      expr {
+        expression = "evaluatePreconfiguredExpr('lfi-v33-stable')"
+      }
     }
 
-    abort_incomplete_multipart_upload {
-      days_after_initiation = 7
+    description = "قراءة ملفات محلية"
+  }
+
+  rule {
+    action   = "allow"
+    priority = 2147483647
+
+    match {
+      versioned_expr = "SRC_IPS_V1"
+      config {
+        src_ip_ranges = ["*"]
+      }
     }
+
+    description = "القاعدة الافتراضية — يجب أن تبقى الأخيرة"
   }
 }
 
-resource "aws_s3_bucket_cors_configuration" "media" {
-  bucket = aws_s3_bucket.media.id
+# ------------------------------------------------------------------ Cloud DNS
 
-  cors_rule {
-    allowed_headers = ["*"]
-    allowed_methods = ["GET", "HEAD"]
-    allowed_origins = var.domain_name != "" ? ["https://${var.domain_name}"] : ["*"]
+resource "google_dns_managed_zone" "main" {
+  count = var.domain_name != "" ? 1 : 0
+
+  name        = replace("${local.name}-zone", ".", "-")
+  dns_name    = "${var.domain_name}."
+  description = "النطاق الرئيسي لـ ${var.project_name}"
+
+  dnssec_config {
+    state = "on"
+  }
+
+  labels = local.labels
+}
+
+resource "google_dns_record_set" "apex" {
+  count = var.domain_name != "" ? 1 : 0
+
+  name         = google_dns_managed_zone.main[0].dns_name
+  managed_zone = google_dns_managed_zone.main[0].name
+  type         = "A"
+  ttl          = 300
+
+  rrdatas = [google_compute_global_address.ingress.address]
+}
+
+resource "google_dns_record_set" "www" {
+  count = var.domain_name != "" ? 1 : 0
+
+  name         = "www.${google_dns_managed_zone.main[0].dns_name}"
+  managed_zone = google_dns_managed_zone.main[0].name
+  type         = "A"
+  ttl          = 300
+
+  rrdatas = [google_compute_global_address.ingress.address]
+}
+
+resource "google_dns_record_set" "api" {
+  count = var.domain_name != "" ? 1 : 0
+
+  name         = "api.${google_dns_managed_zone.main[0].dns_name}"
+  managed_zone = google_dns_managed_zone.main[0].name
+  type         = "A"
+  ttl          = 300
+
+  rrdatas = [google_compute_global_address.ingress.address]
+}
+
+# ------------------------------------------------------- Cloud Storage للوسائط
+
+resource "google_storage_bucket" "media" {
+  name     = "${local.name}-media-${data.google_project.current.number}"
+  location = var.region
+
+  /*
+   * الوصول الموحّد على مستوى الدلو يلغي قوائم ACL لكل كائن. ACL لكل كائن هي
+   * الطريقة الكلاسيكية لتسريب دلو كامل عن طريق الخطأ.
+   */
+  uniform_bucket_level_access = true
+  public_access_prevention    = "inherited"
+
+  versioning {
+    enabled = true
+  }
+
+  encryption {
+    default_kms_key_name = google_kms_crypto_key.app.id
+  }
+
+  cors {
+    origin          = var.domain_name != "" ? ["https://${var.domain_name}"] : ["*"]
+    method          = ["GET", "HEAD"]
+    response_header = ["Content-Type", "Cache-Control"]
     max_age_seconds = 3600
   }
-}
 
-# ------------------------------------------------------------- CloudFront
-
-resource "aws_cloudfront_origin_access_control" "media" {
-  name                              = "${local.name}-media-oac"
-  origin_access_control_origin_type = "s3"
-  signing_behavior                  = "always"
-  signing_protocol                  = "sigv4"
-}
-
-resource "aws_s3_bucket_policy" "media" {
-  bucket = aws_s3_bucket.media.id
-
-  policy = jsonencode({
-    Version = "2012-10-17"
-    Statement = [{
-      Sid       = "AllowCloudFrontServicePrincipal"
-      Effect    = "Allow"
-      Principal = { Service = "cloudfront.amazonaws.com" }
-      Action    = "s3:GetObject"
-      Resource  = "${aws_s3_bucket.media.arn}/*"
-      Condition = {
-        StringEquals = {
-          "AWS:SourceArn" = aws_cloudfront_distribution.main.arn
-        }
-      }
-    }]
-  })
-}
-
-resource "aws_cloudfront_cache_policy" "static" {
-  name        = "${local.name}-static"
-  default_ttl = 86400
-  max_ttl     = 31536000
-  min_ttl     = 1
-
-  parameters_in_cache_key_and_forwarded_to_origin {
-    enable_accept_encoding_brotli = true
-    enable_accept_encoding_gzip   = true
-
-    cookies_config {
-      cookie_behavior = "none"
+  lifecycle_rule {
+    condition {
+      age                = 30
+      with_state         = "ARCHIVED"
+      num_newer_versions = 3
     }
-    headers_config {
-      header_behavior = "none"
-    }
-    query_strings_config {
-      query_string_behavior = "none"
-    }
-  }
-}
-
-resource "aws_cloudfront_cache_policy" "api" {
-  name        = "${local.name}-api"
-  default_ttl = 0
-  max_ttl     = 300
-  min_ttl     = 0
-
-  parameters_in_cache_key_and_forwarded_to_origin {
-    enable_accept_encoding_brotli = true
-    enable_accept_encoding_gzip   = true
-
-    cookies_config {
-      cookie_behavior = "none"
-    }
-
-    headers_config {
-      header_behavior = "whitelist"
-      headers {
-        # اللغة جزء من مفتاح الكاش: استجابة عربية لا تُقدَّم لطالب إنجليزية
-        items = ["Accept-Language", "Authorization", "Origin"]
-      }
-    }
-
-    query_strings_config {
-      query_string_behavior = "all"
-    }
-  }
-}
-
-resource "aws_cloudfront_distribution" "main" {
-  enabled         = true
-  is_ipv6_enabled = true
-  comment         = "${local.name} storefront"
-  price_class     = var.environment == "prod" ? "PriceClass_All" : "PriceClass_100"
-  http_version    = "http2and3"
-
-  aliases = var.domain_name != "" ? [var.domain_name, "www.${var.domain_name}"] : []
-
-  web_acl_id = var.enable_waf ? aws_wafv2_web_acl.main[0].arn : null
-
-  origin {
-    domain_name              = aws_s3_bucket.media.bucket_regional_domain_name
-    origin_id                = "s3-media"
-    origin_access_control_id = aws_cloudfront_origin_access_control.media.id
-  }
-
-  origin {
-    # الأصل الديناميكي: ALB أمام الـ api-gateway و Next.js
-    domain_name = "alb.${var.domain_name != "" ? var.domain_name : "placeholder.invalid"}"
-    origin_id   = "alb-app"
-
-    custom_origin_config {
-      http_port                = 80
-      https_port               = 443
-      origin_protocol_policy   = "https-only"
-      origin_ssl_protocols     = ["TLSv1.2"]
-      origin_read_timeout      = 30
-      origin_keepalive_timeout = 60
-    }
-  }
-
-  # الافتراضي: التطبيق
-  default_cache_behavior {
-    target_origin_id       = "alb-app"
-    viewer_protocol_policy = "redirect-to-https"
-    allowed_methods        = ["GET", "HEAD", "OPTIONS", "PUT", "POST", "PATCH", "DELETE"]
-    cached_methods         = ["GET", "HEAD"]
-    compress               = true
-    cache_policy_id        = aws_cloudfront_cache_policy.api.id
-  }
-
-  # الصور والأصول: كاش طويل جدًا (أسماؤها تحمل بصمة المحتوى)
-  ordered_cache_behavior {
-    path_pattern           = "/media/*"
-    target_origin_id       = "s3-media"
-    viewer_protocol_policy = "redirect-to-https"
-    allowed_methods        = ["GET", "HEAD", "OPTIONS"]
-    cached_methods         = ["GET", "HEAD"]
-    compress               = true
-    cache_policy_id        = aws_cloudfront_cache_policy.static.id
-  }
-
-  ordered_cache_behavior {
-    path_pattern           = "/_next/static/*"
-    target_origin_id       = "alb-app"
-    viewer_protocol_policy = "redirect-to-https"
-    allowed_methods        = ["GET", "HEAD"]
-    cached_methods         = ["GET", "HEAD"]
-    compress               = true
-    cache_policy_id        = aws_cloudfront_cache_policy.static.id
-  }
-
-  restrictions {
-    geo_restriction {
-      restriction_type = "none"
-    }
-  }
-
-  viewer_certificate {
-    cloudfront_default_certificate = var.domain_name == ""
-    acm_certificate_arn            = var.domain_name != "" ? aws_acm_certificate.main[0].arn : null
-    ssl_support_method             = var.domain_name != "" ? "sni-only" : null
-    minimum_protocol_version       = var.domain_name != "" ? "TLSv1.2_2021" : null
-  }
-
-  # صفحة الخطأ من CloudFront: يبقى الموقع يعرض شيئًا حتى لو سقط الأصل بالكامل
-  custom_error_response {
-    error_code            = 503
-    response_code         = 503
-    response_page_path    = "/maintenance.html"
-    error_caching_min_ttl = 10
-  }
-
-  tags = { Name = local.name }
-}
-
-# --------------------------------------------------------------------- WAF
-
-resource "aws_wafv2_web_acl" "main" {
-  count = var.enable_waf ? 1 : 0
-
-  name     = "${local.name}-waf"
-  scope    = "CLOUDFRONT" # يجب إنشاؤه في us-east-1
-  provider = aws.us_east_1
-
-  default_action {
-    allow {}
-  }
-
-  rule {
-    name     = "AWSManagedCommonRules"
-    priority = 1
-
-    override_action {
-      none {}
-    }
-
-    statement {
-      managed_rule_group_statement {
-        vendor_name = "AWS"
-        name        = "AWSManagedRulesCommonRuleSet"
-      }
-    }
-
-    visibility_config {
-      cloudwatch_metrics_enabled = true
-      metric_name                = "common-rules"
-      sampled_requests_enabled   = true
-    }
-  }
-
-  rule {
-    name     = "AWSManagedBadInputs"
-    priority = 2
-
-    override_action {
-      none {}
-    }
-
-    statement {
-      managed_rule_group_statement {
-        vendor_name = "AWS"
-        name        = "AWSManagedRulesKnownBadInputsRuleSet"
-      }
-    }
-
-    visibility_config {
-      cloudwatch_metrics_enabled = true
-      metric_name                = "bad-inputs"
-      sampled_requests_enabled   = true
-    }
-  }
-
-  # حد صارم على تسجيل الدخول: يبطئ هجمات حشو بيانات الاعتماد
-  rule {
-    name     = "LoginRateLimit"
-    priority = 10
-
     action {
-      block {}
-    }
-
-    statement {
-      rate_based_statement {
-        limit              = 100
-        aggregate_key_type = "IP"
-
-        scope_down_statement {
-          byte_match_statement {
-            positional_constraint = "STARTS_WITH"
-            search_string         = "/api/v1/auth/"
-
-            field_to_match {
-              uri_path {}
-            }
-
-            text_transformation {
-              priority = 0
-              type     = "LOWERCASE"
-            }
-          }
-        }
-      }
-    }
-
-    visibility_config {
-      cloudwatch_metrics_enabled = true
-      metric_name                = "login-rate-limit"
-      sampled_requests_enabled   = true
+      type = "Delete"
     }
   }
 
-  rule {
-    name     = "GlobalRateLimit"
-    priority = 20
-
+  lifecycle_rule {
+    condition {
+      age = 90
+    }
     action {
-      block {}
-    }
-
-    statement {
-      rate_based_statement {
-        limit              = 5000
-        aggregate_key_type = "IP"
-      }
-    }
-
-    visibility_config {
-      cloudwatch_metrics_enabled = true
-      metric_name                = "global-rate-limit"
-      sampled_requests_enabled   = true
+      type          = "SetStorageClass"
+      storage_class = "NEARLINE"
     }
   }
 
-  visibility_config {
-    cloudwatch_metrics_enabled = true
-    metric_name                = "${local.name}-waf"
-    sampled_requests_enabled   = true
-  }
-
-  tags = { Name = "${local.name}-waf" }
+  labels = local.labels
 }
 
-# CloudFront و WAF بنطاق CLOUDFRONT يجب إنشاؤهما في us-east-1
-provider "aws" {
-  alias  = "us_east_1"
-  region = "us-east-1"
+# وكيل خدمة Cloud Storage يحتاج المفتاح ليشفّر الكائنات
+resource "google_kms_crypto_key_iam_member" "storage" {
+  crypto_key_id = google_kms_crypto_key.app.id
+  role          = "roles/cloudkms.cryptoKeyEncrypterDecrypter"
+  member        = "serviceAccount:service-${data.google_project.current.number}@gs-project-accounts.iam.gserviceaccount.com"
+}
 
-  default_tags {
-    tags = {
-      Project     = "topchoice-clone"
-      Environment = var.environment
-      ManagedBy   = "terraform"
+resource "google_storage_bucket_iam_member" "public_read" {
+  bucket = google_storage_bucket.media.name
+  role   = "roles/storage.objectViewer"
+  member = "allUsers"
+}
+
+resource "google_storage_bucket_iam_member" "catalog_writer" {
+  bucket = google_storage_bucket.media.name
+  role   = "roles/storage.objectAdmin"
+  member = "serviceAccount:${google_service_account.workload["catalog-service"].email}"
+}
+
+# --------------------------------------------- CDN لدلو الوسائط
+
+/*
+ * الصور تُقدَّم من الحافة مباشرة لا عبر العنقود: طلب صورة لا يجب أن يستهلك
+ * اتصالًا في خدمة الكتالوج. دلو خلفي مستقل بالـ CDN أمامه.
+ */
+resource "google_compute_backend_bucket" "media" {
+  name        = "${local.name}-media"
+  bucket_name = google_storage_bucket.media.name
+  enable_cdn  = true
+
+  cdn_policy {
+    cache_mode        = "CACHE_ALL_STATIC"
+    default_ttl       = var.cdn_default_ttl
+    max_ttl           = 86400
+    client_ttl        = var.cdn_default_ttl
+    negative_caching  = true
+    serve_while_stale = 86400
+
+    /*
+     * تجميع الطلبات المتزامنة على نفس المفتاح في طلب أصل واحد. بدونه، انتهاء
+     * صلاحية صورة شائعة يرسل آلاف الطلبات للأصل في اللحظة نفسها.
+     */
+    request_coalescing = true
+
+    negative_caching_policy {
+      code = 404
+      ttl  = 60
     }
   }
-}
 
-# ----------------------------------------------------------- ACM & Route 53
-
-resource "aws_acm_certificate" "main" {
-  count    = var.domain_name != "" ? 1 : 0
-  provider = aws.us_east_1
-
-  domain_name               = var.domain_name
-  subject_alternative_names = ["www.${var.domain_name}", "*.${var.domain_name}"]
-  validation_method         = "DNS"
-
-  lifecycle {
-    create_before_destroy = true
-  }
-
-  tags = { Name = "${local.name}-cert" }
-}
-
-resource "aws_route53_zone" "main" {
-  count = var.domain_name != "" ? 1 : 0
-  name  = var.domain_name
-
-  tags = { Name = "${local.name}-zone" }
-}
-
-resource "aws_route53_record" "cert_validation" {
-  for_each = var.domain_name != "" ? {
-    for dvo in aws_acm_certificate.main[0].domain_validation_options :
-    dvo.domain_name => {
-      name   = dvo.resource_record_name
-      record = dvo.resource_record_value
-      type   = dvo.resource_record_type
-    }
-  } : {}
-
-  zone_id         = aws_route53_zone.main[0].zone_id
-  name            = each.value.name
-  type            = each.value.type
-  records         = [each.value.record]
-  ttl             = 60
-  allow_overwrite = true
-}
-
-resource "aws_route53_record" "root" {
-  count = var.domain_name != "" ? 1 : 0
-
-  zone_id = aws_route53_zone.main[0].zone_id
-  name    = var.domain_name
-  type    = "A"
-
-  alias {
-    name                   = aws_cloudfront_distribution.main.domain_name
-    zone_id                = aws_cloudfront_distribution.main.hosted_zone_id
-    evaluate_target_health = false
-  }
+  compression_mode = "AUTOMATIC"
 }

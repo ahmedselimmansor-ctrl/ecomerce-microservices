@@ -1,5 +1,5 @@
-import { SESClient, SendEmailCommand } from '@aws-sdk/client-ses';
-import { SNSClient, PublishCommand } from '@aws-sdk/client-sns';
+import { PubSub, type Topic } from '@google-cloud/pubsub';
+import sgMail from '@sendgrid/mail';
 import nodemailer, { type Transporter } from 'nodemailer';
 import type { RenderedMessage } from './templates.js';
 
@@ -10,51 +10,67 @@ export interface Sender {
 }
 
 /**
- * المُرسِل الإنتاجي: Amazon SES للإيميل و SNS للرسائل النصية.
- * الاعتماد على IRSA — لا مفاتيح وصول في متغيرات البيئة.
+ * المُرسِل الإنتاجي: SendGrid للإيميل و Pub/Sub للرسائل النصية.
+ *
+ * ‏Google Cloud لا تقدّم خدمة إرسال بريد على الإطلاق — لا مقابل لها هنا —
+ * فالبريد يخرج عبر SendGrid، وهو الطريق الذي توصي به Google نفسها. ثمن ذلك
+ * مفتاح API يعيش في Secret Manager بدل هوية عمل خالصة، وهو الاستثناء
+ * الوحيد الذي نقبله في هذه الخدمة.
+ *
+ * والرسائل النصية كذلك بلا مقابل مُدار: ننشرها على طوبيك Pub/Sub تستهلكه
+ * بوّابة SMS خارجية. النداء المتزامن لمزوّد خارجي كان سيربط استهلاك Kafka
+ * بتوفّر ذلك المزوّد؛ بالنشر تبقى الرسالة محفوظة ويُعاد تسليمها بعد تعافيه
+ * بدل أن تضيع في محاولة فاشلة.
+ *
+ * الوصول إلى Pub/Sub يمرّ عبر Workload Identity — لا مفتاح حساب خدمة على
+ * القرص ولا في متغيرات البيئة.
  */
-export class AwsSender implements Sender {
-  readonly name = 'aws';
+export class GcpSender implements Sender {
+  readonly name = 'gcp';
 
-  private readonly ses: SESClient;
-  private readonly sns: SNSClient;
+  private readonly topic: Topic | null;
+  private readonly emailEnabled: boolean;
 
   constructor(
-    private readonly region: string,
+    projectId: string | undefined,
     private readonly fromAddress: string,
-    endpoint?: string,
+    apiKey: string | undefined,
+    smsTopic: string | undefined,
   ) {
-    const common = endpoint ? { region, endpoint } : { region };
-    this.ses = new SESClient(common);
-    this.sns = new SNSClient(common);
+    if (apiKey) {
+      sgMail.setApiKey(apiKey);
+    }
+    this.emailEnabled = Boolean(apiKey);
+
+    // عميل Pub/Sub لا يتصل عند الإنشاء، لكن بناءه بلا طوبيك مُعرَّف يخفي
+    // خطأ إعداد حتى أول رسالة نصية — لذلك نحسمه هنا.
+    const pubsub = new PubSub(projectId ? { projectId } : {});
+    this.topic = smsTopic ? pubsub.topic(smsTopic) : null;
   }
 
   async sendEmail(to: string, message: RenderedMessage): Promise<void> {
-    await this.ses.send(
-      new SendEmailCommand({
-        Source: this.fromAddress,
-        Destination: { ToAddresses: [to] },
-        Message: {
-          Subject: { Data: message.subject, Charset: 'UTF-8' },
-          Body: {
-            Html: { Data: message.html, Charset: 'UTF-8' },
-            Text: { Data: message.text, Charset: 'UTF-8' },
-          },
-        },
-      }),
-    );
+    if (!this.emailEnabled) {
+      throw new Error('SENDGRID_API_KEY is not configured');
+    }
+    await sgMail.send({
+      to,
+      from: this.fromAddress,
+      subject: message.subject,
+      html: message.html,
+      text: message.text,
+    });
   }
 
   async sendSms(phone: string, text: string): Promise<void> {
-    await this.sns.send(
-      new PublishCommand({
-        PhoneNumber: phone,
-        Message: text,
-        MessageAttributes: {
-          'AWS.SNS.SMS.SMSType': { DataType: 'String', StringValue: 'Transactional' },
-        },
-      }),
-    );
+    if (!this.topic) {
+      throw new Error('PUBSUB_SMS_TOPIC is not configured');
+    }
+    await this.topic.publishMessage({
+      json: { phone, text },
+      // البوّابة تُرشّح على السمة لا على المحتوى، فيبقى نصّ الرسالة معتمًا
+      // في سجلات Pub/Sub وفي أي اشتراك تشخيصي.
+      attributes: { channel: 'sms', service: 'notification-service' },
+    });
   }
 }
 

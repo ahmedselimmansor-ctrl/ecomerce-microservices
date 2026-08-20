@@ -1,277 +1,184 @@
 # ============================================================================
-#  VPC بثلاث طبقات عبر عدة نطاقات توفر:
-#    public  → ALB و NAT
-#    private → عُقد EKS (لا IP عام)
-#    data    → قواعد البيانات (لا مسار خروج للإنترنت إطلاقًا)
+#  الشبكة
+#
+#  الفرق البنيوي عن AWS: في Google Cloud الشبكة عالمية والشبكات الفرعية إقليمية،
+#  فلا نُنشئ subnet لكل نطاق توفر. شبكة فرعية واحدة تغطي المنطقة كلها، وGKE
+#  يوزّع العقد على النطاقات الفرعية داخلها. هذا يلغي فئة كاملة من أخطاء
+#  «نسيت subnet في az-c» التي كانت شائعة في تصميم AWS.
 # ============================================================================
 
-locals {
-  name = "${var.project}-${var.environment}"
-  azs  = slice(data.aws_availability_zones.available.names, 0, var.az_count)
+resource "google_compute_network" "vpc" {
+  name                    = local.name
+  auto_create_subnetworks = false
+  routing_mode            = "REGIONAL"
 
-  # /20 لكل شبكة فرعية = 4096 عنوانًا؛ كافٍ لآلاف الـ pods مع IPv4 لكل pod
-  public_subnets  = [for i in range(var.az_count) : cidrsubnet(var.vpc_cidr, 4, i)]
-  private_subnets = [for i in range(var.az_count) : cidrsubnet(var.vpc_cidr, 4, i + 4)]
-  data_subnets    = [for i in range(var.az_count) : cidrsubnet(var.vpc_cidr, 4, i + 8)]
+  description = "شبكة ${local.name} — شبكات فرعية مخصّصة لا تلقائية"
 }
 
-data "aws_availability_zones" "available" {
-  state = "available"
+/*
+ * النطاقات الثانوية هي جوهر شبكات GKE الأصلية (VPC-native): الـ Pod يأخذ عنوانًا
+ * حقيقيًا من الشبكة لا عنوانًا مُخفى خلف overlay. النتيجة أن موازن الحمل يصل
+ * للـ Pod مباشرة بلا قفزة إضافية، وأن سياسات الجدار الناري تراه.
+ */
+resource "google_compute_subnetwork" "gke" {
+  name                     = "${local.name}-gke"
+  ip_cidr_range            = var.subnet_cidr
+  region                   = var.region
+  network                  = google_compute_network.vpc.id
+  private_ip_google_access = true
 
-  filter {
-    name   = "opt-in-status"
-    values = ["opt-in-not-required"]
+  secondary_ip_range {
+    range_name    = "${local.name}-pods"
+    ip_cidr_range = var.pods_cidr
+  }
+
+  secondary_ip_range {
+    range_name    = "${local.name}-services"
+    ip_cidr_range = var.services_cidr
+  }
+
+  log_config {
+    aggregation_interval = "INTERVAL_10_MIN"
+    flow_sampling        = 0.5
+    metadata             = "INCLUDE_ALL_METADATA"
   }
 }
 
-resource "aws_vpc" "main" {
-  cidr_block           = var.vpc_cidr
-  enable_dns_hostnames = true
-  enable_dns_support   = true
+# --------------------------------------------------------------- الخروج للإنترنت
 
-  tags = { Name = "${local.name}-vpc" }
+/*
+ * العقد بلا عناوين عامة، فتحتاج Cloud NAT للوصول لـ Artifact Registry وحزم npm
+ * وغيرها. تخصيص المنافذ تلقائي: التخصيص الثابت ينفد صامتًا تحت الحمل ويظهر
+ * كأخطاء اتصال عشوائية يصعب تشخيصها.
+ */
+resource "google_compute_router" "router" {
+  name    = "${local.name}-router"
+  region  = var.region
+  network = google_compute_network.vpc.id
 }
 
-resource "aws_internet_gateway" "main" {
-  vpc_id = aws_vpc.main.id
-  tags   = { Name = "${local.name}-igw" }
-}
+resource "google_compute_router_nat" "nat" {
+  name   = "${local.name}-nat"
+  router = google_compute_router.router.name
+  region = var.region
 
-# ------------------------------------------------------------------ subnets
+  nat_ip_allocate_option             = "AUTO_ONLY"
+  source_subnetwork_ip_ranges_to_nat = "ALL_SUBNETWORKS_ALL_IP_RANGES"
 
-resource "aws_subnet" "public" {
-  count = var.az_count
+  enable_dynamic_port_allocation = true
+  min_ports_per_vm               = 64
+  max_ports_per_vm               = 2048
 
-  vpc_id                  = aws_vpc.main.id
-  cidr_block              = local.public_subnets[count.index]
-  availability_zone       = local.azs[count.index]
-  map_public_ip_on_launch = true
-
-  tags = {
-    Name = "${local.name}-public-${local.azs[count.index]}"
-    Tier = "public"
-    # الوسم مطلوب حتى ينشئ AWS Load Balancer Controller موازِنات عامة هنا
-    "kubernetes.io/role/elb"              = "1"
-    "kubernetes.io/cluster/${local.name}" = "shared"
+  log_config {
+    enable = true
+    filter = "ERRORS_ONLY"
   }
 }
 
-resource "aws_subnet" "private" {
-  count = var.az_count
+# ------------------------------------------------- الوصول الخاص للخدمات المُدارة
 
-  vpc_id            = aws_vpc.main.id
-  cidr_block        = local.private_subnets[count.index]
-  availability_zone = local.azs[count.index]
-
-  tags = {
-    Name                                  = "${local.name}-private-${local.azs[count.index]}"
-    Tier                                  = "private"
-    "kubernetes.io/role/internal-elb"     = "1"
-    "kubernetes.io/cluster/${local.name}" = "shared"
-    # Karpenter يكتشف الشبكات الصالحة عبر هذا الوسم
-    "karpenter.sh/discovery" = local.name
-  }
+/*
+ * Private Service Access: نحجز نطاقًا من عناويننا ونُهديه لشبكة Google، فتضع
+ * فيها Cloud SQL و Memorystore. النتيجة أن قواعد البيانات لا تملك عنوانًا عامًا
+ * إطلاقًا — لا جدار ناري نعتمد عليه، بل غياب المسار أصلًا.
+ */
+resource "google_compute_global_address" "psa" {
+  name          = "${local.name}-psa"
+  purpose       = "VPC_PEERING"
+  address_type  = "INTERNAL"
+  prefix_length = 16
+  network       = google_compute_network.vpc.id
 }
 
-resource "aws_subnet" "data" {
-  count = var.az_count
+resource "google_service_networking_connection" "psa" {
+  network                 = google_compute_network.vpc.id
+  service                 = "servicenetworking.googleapis.com"
+  reserved_peering_ranges = [google_compute_global_address.psa.name]
 
-  vpc_id            = aws_vpc.main.id
-  cidr_block        = local.data_subnets[count.index]
-  availability_zone = local.azs[count.index]
-
-  tags = {
-    Name = "${local.name}-data-${local.azs[count.index]}"
-    Tier = "data"
-  }
+  # بدونه يبقى النطاق محجوزًا بعد الهدم ويمنع إعادة الإنشاء
+  deletion_policy = "ABANDON"
 }
 
-# ------------------------------------------------------------ NAT & routing
+# ----------------------------------------------- MongoDB Atlas عبر PSC
 
-resource "aws_eip" "nat" {
-  count  = var.single_nat_gateway ? 1 : var.az_count
-  domain = "vpc"
-  tags   = { Name = "${local.name}-nat-eip-${count.index}" }
+/*
+ * Atlas ليست خدمة Google، فلا يصلها Private Service Access. نصل إليها عبر
+ * Private Service Connect: نقطة اتصال في شبكتنا تُوجَّه إلى مرفق خدمة تعطينا
+ * إياه Atlas. حتى تُنشئ عنقود Atlas تبقى القائمة فارغة ولا يُنشأ شيء.
+ */
+resource "google_compute_address" "mongodb_psc" {
+  count = length(var.mongodb_atlas_service_attachments)
+
+  name         = "${local.name}-mongodb-psc-${count.index}"
+  subnetwork   = google_compute_subnetwork.gke.id
+  address_type = "INTERNAL"
+  region       = var.region
 }
 
-resource "aws_nat_gateway" "main" {
-  count = var.single_nat_gateway ? 1 : var.az_count
+resource "google_compute_forwarding_rule" "mongodb_psc" {
+  count = length(var.mongodb_atlas_service_attachments)
 
-  allocation_id = aws_eip.nat[count.index].id
-  subnet_id     = aws_subnet.public[count.index].id
-  depends_on    = [aws_internet_gateway.main]
-
-  tags = { Name = "${local.name}-nat-${count.index}" }
+  name                  = "${local.name}-mongodb-psc-${count.index}"
+  region                = var.region
+  network               = google_compute_network.vpc.id
+  subnetwork            = google_compute_subnetwork.gke.id
+  ip_address            = google_compute_address.mongodb_psc[count.index].id
+  target                = var.mongodb_atlas_service_attachments[count.index]
+  load_balancing_scheme = ""
 }
 
-resource "aws_route_table" "public" {
-  vpc_id = aws_vpc.main.id
+# ------------------------------------------------------------- الجدار الناري
 
-  route {
-    cidr_block = "0.0.0.0/0"
-    gateway_id = aws_internet_gateway.main.id
-  }
+/*
+ * GKE يُنشئ قواعده الخاصة تلقائيًا. ما نضيفه هنا هو ما لا يُنشئه:
+ * فحوص الصحة من موازن الحمل، ومنفذ webhook الذي يحتاجه مستوى التحكّم.
+ */
+resource "google_compute_firewall" "health_checks" {
+  name    = "${local.name}-allow-health-checks"
+  network = google_compute_network.vpc.name
 
-  tags = { Name = "${local.name}-rt-public" }
-}
+  description = "نطاقات فاحصي الصحة في Google — ثابتة وموثّقة"
 
-resource "aws_route_table_association" "public" {
-  count = var.az_count
-
-  subnet_id      = aws_subnet.public[count.index].id
-  route_table_id = aws_route_table.public.id
-}
-
-# جدول توجيه لكل نطاق توفر: سقوط NAT في نطاق لا يقطع الخروج عن البقية
-resource "aws_route_table" "private" {
-  count  = var.az_count
-  vpc_id = aws_vpc.main.id
-
-  route {
-    cidr_block     = "0.0.0.0/0"
-    nat_gateway_id = aws_nat_gateway.main[var.single_nat_gateway ? 0 : count.index].id
+  allow {
+    protocol = "tcp"
   }
 
-  tags = { Name = "${local.name}-rt-private-${count.index}" }
+  source_ranges = ["35.191.0.0/16", "130.211.0.0/22"]
+  target_tags   = ["${local.name}-node"]
 }
 
-resource "aws_route_table_association" "private" {
-  count = var.az_count
+resource "google_compute_firewall" "master_webhooks" {
+  name    = "${local.name}-allow-master-webhooks"
+  network = google_compute_network.vpc.name
 
-  subnet_id      = aws_subnet.private[count.index].id
-  route_table_id = aws_route_table.private[count.index].id
-}
+  description = <<-EOT
+    مستوى التحكّم يفتح افتراضيًا 443 و10250 فقط. أي admission webhook يستمع
+    على منفذ آخر (مثل 8443 و9443 في cert-manager و External Secrets) يفشل
+    بمهلة غامضة بلا هذه القاعدة.
+  EOT
 
-# طبقة البيانات بلا مسار خروج — قرار أمني مقصود
-resource "aws_route_table" "data" {
-  vpc_id = aws_vpc.main.id
-  tags   = { Name = "${local.name}-rt-data" }
-}
-
-resource "aws_route_table_association" "data" {
-  count = var.az_count
-
-  subnet_id      = aws_subnet.data[count.index].id
-  route_table_id = aws_route_table.data.id
-}
-
-# --------------------------------------------------------------- endpoints
-
-# S3 و DynamoDB عبر Gateway Endpoints: مجانية وتوفّر تكلفة NAT بالكامل
-resource "aws_vpc_endpoint" "s3" {
-  vpc_id            = aws_vpc.main.id
-  service_name      = "com.amazonaws.${var.aws_region}.s3"
-  vpc_endpoint_type = "Gateway"
-
-  route_table_ids = concat(
-    aws_route_table.private[*].id,
-    [aws_route_table.data.id],
-  )
-
-  tags = { Name = "${local.name}-vpce-s3" }
-}
-
-resource "aws_vpc_endpoint" "dynamodb" {
-  vpc_id            = aws_vpc.main.id
-  service_name      = "com.amazonaws.${var.aws_region}.dynamodb"
-  vpc_endpoint_type = "Gateway"
-  route_table_ids   = aws_route_table.private[*].id
-
-  tags = { Name = "${local.name}-vpce-dynamodb" }
-}
-
-# Interface Endpoints: يقلّل تكلفة نقل البيانات عبر NAT ويبقي الحركة داخل AWS
-resource "aws_security_group" "vpc_endpoints" {
-  name        = "${local.name}-vpce"
-  description = "Allow HTTPS from the VPC to interface endpoints"
-  vpc_id      = aws_vpc.main.id
-
-  ingress {
-    description = "HTTPS from VPC"
-    from_port   = 443
-    to_port     = 443
-    protocol    = "tcp"
-    cidr_blocks = [var.vpc_cidr]
+  allow {
+    protocol = "tcp"
+    ports    = ["8443", "9443", "15017"]
   }
 
-  egress {
-    from_port   = 0
-    to_port     = 0
-    protocol    = "-1"
-    cidr_blocks = ["0.0.0.0/0"]
+  source_ranges = [var.master_cidr]
+  target_tags   = ["${local.name}-node"]
+}
+
+resource "google_compute_firewall" "deny_egress_metadata" {
+  name      = "${local.name}-deny-legacy-metadata"
+  network   = google_compute_network.vpc.name
+  direction = "EGRESS"
+  priority  = 900
+
+  description = "خادم البيانات الوصفية القديم يسرّب رموز حساب الخدمة بلا ترويسة"
+
+  deny {
+    protocol = "tcp"
+    ports    = ["80"]
   }
 
-  tags = { Name = "${local.name}-vpce-sg" }
-}
-
-resource "aws_vpc_endpoint" "interface" {
-  for_each = toset([
-    "ecr.api",
-    "ecr.dkr",
-    "logs",
-    "secretsmanager",
-    "sts",
-    "kms",
-    "sqs",
-    "sns",
-  ])
-
-  vpc_id              = aws_vpc.main.id
-  service_name        = "com.amazonaws.${var.aws_region}.${each.value}"
-  vpc_endpoint_type   = "Interface"
-  subnet_ids          = aws_subnet.private[*].id
-  security_group_ids  = [aws_security_group.vpc_endpoints.id]
-  private_dns_enabled = true
-
-  tags = { Name = "${local.name}-vpce-${replace(each.value, ".", "-")}" }
-}
-
-# ------------------------------------------------------------- flow logs
-
-resource "aws_cloudwatch_log_group" "vpc_flow" {
-  name              = "/aws/vpc/${local.name}/flow-logs"
-  retention_in_days = var.environment == "prod" ? 90 : 14
-}
-
-resource "aws_flow_log" "main" {
-  vpc_id                   = aws_vpc.main.id
-  traffic_type             = "REJECT" # المرفوض فقط: يكشف محاولات الوصول بتكلفة أقل
-  log_destination_type     = "cloud-watch-logs"
-  log_destination          = aws_cloudwatch_log_group.vpc_flow.arn
-  iam_role_arn             = aws_iam_role.flow_logs.arn
-  max_aggregation_interval = 600
-
-  tags = { Name = "${local.name}-flow-logs" }
-}
-
-resource "aws_iam_role" "flow_logs" {
-  name = "${local.name}-flow-logs"
-
-  assume_role_policy = jsonencode({
-    Version = "2012-10-17"
-    Statement = [{
-      Effect    = "Allow"
-      Principal = { Service = "vpc-flow-logs.amazonaws.com" }
-      Action    = "sts:AssumeRole"
-    }]
-  })
-}
-
-resource "aws_iam_role_policy" "flow_logs" {
-  name = "${local.name}-flow-logs"
-  role = aws_iam_role.flow_logs.id
-
-  policy = jsonencode({
-    Version = "2012-10-17"
-    Statement = [{
-      Effect = "Allow"
-      Action = [
-        "logs:CreateLogStream",
-        "logs:PutLogEvents",
-        "logs:DescribeLogGroups",
-        "logs:DescribeLogStreams",
-      ]
-      Resource = "${aws_cloudwatch_log_group.vpc_flow.arn}:*"
-    }]
-  })
+  destination_ranges = ["169.254.169.254/32"]
+  target_tags        = ["${local.name}-node"]
 }
