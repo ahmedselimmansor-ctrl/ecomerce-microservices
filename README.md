@@ -18,7 +18,7 @@
 | **السحابة** | Google Cloud — GKE · Cloud SQL · Memorystore · Managed Kafka · Firestore |
 | **التخزين** | PostgreSQL · MongoDB · Redis · OpenSearch · Cloud Storage |
 | **الاتساق** | Saga بالتنسيق + Transactional Outbox + مفاتيح تعطيل التكرار |
-| **الاختبارات** | 269 اختبار وحدة · 9 اختبارات تزاحم على PostgreSQL حقيقي · 40 حالة على المتجر · 28 على لوحة التحكم |
+| **الاختبارات** | 271 اختبار وحدة · 9 اختبارات تزاحم على PostgreSQL حقيقي · 40 حالة على المتجر · 28 على لوحة التحكم |
 | **التشغيل المحلي** | `make up` — عشرون حاوية، بلا تسطيب Java أو Python على جهازك |
 
 ```bash
