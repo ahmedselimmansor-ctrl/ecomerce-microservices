@@ -189,6 +189,26 @@ check "admin path blocked at edge" \
 check "actuator not exposed" \
   "$(status "${GW}/api/v1/products/actuator/health")" 404
 
+# محاولات التفاف حقيقية كانت تمرّ: الحاجز كان يطابق على الـ URL الخام،
+# فيفكّها Spring بعده إلى /admin ويمنح وصولًا إداريًا كاملًا بلا مصادقة.
+# curl يحتاج --path-as-is وإلا طبّع المسار قبل الإرسال فبطل الاختبار.
+check "percent-encoded admin blocked" \
+  "$(status --path-as-is "${GW}/api/v1/products/%61dmin")" 404
+check "double-encoded admin blocked" \
+  "$(status --path-as-is "${GW}/api/v1/products/%2561dmin")" 404
+check "matrix-param admin blocked" \
+  "$(status --path-as-is "${GW}/api/v1/products/admin;x=1")" 404
+check "encoded-slash admin blocked" \
+  "$(status --path-as-is "${GW}/api/v1/products%2Fadmin")" 404
+check "traversal to admin blocked" \
+  "$(status --path-as-is "${GW}/api/v1/products/foo/../admin")" 404
+check "admin write blocked via encoding" \
+  "$(status -X DELETE --path-as-is "${GW}/api/v1/products/%61dmin/TC-APL-IP15-128-BLK")" 404
+
+# الحجب على المقطع كاملًا لا على النص: مقطع يبدأ بـ admin ليس admin
+check "similar segment not over-blocked" \
+  "$(status "${GW}/api/v1/search?q=admin")" 200
+
 # ------------------------------------------------------------------ summary
 echo ""
 echo "=============================================="

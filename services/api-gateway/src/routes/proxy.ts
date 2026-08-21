@@ -1,5 +1,6 @@
 import type { FastifyInstance, FastifyRequest } from 'fastify';
-import { config, services } from '../config.js';
+import { services } from '../config.js';
+import { isBlockedPath } from '../lib/path-guard.js';
 
 interface RouteDef {
   prefix: string;
@@ -28,13 +29,6 @@ const ROUTES: RouteDef[] = [
   { prefix: '/api/v1/inventory', target: services.inventory, auth: 'none' },
 ];
 
-/**
- * مسارات داخلية لا يجوز أن تُعرَض للعالم.
- * النمط يطابق المقطع سواء كان في وسط المسار أو في نهايته
- * ({@code /products/admin} و{@code /products/admin/x} كلاهما محظور).
- */
-const BLOCKED_PATH = /\/(internal|admin|actuator)(\/|$|\?)/i;
-
 export async function proxyRoutes(app: FastifyInstance): Promise<void> {
   // ملاحظة: `@fastify/reply-from` يُسجَّل في الجذر (server.ts) لا هنا،
   // لأن التسجيل داخل إضافة يحصره في سياقها فلا تراه مسارات الإدارة.
@@ -49,7 +43,7 @@ export async function proxyRoutes(app: FastifyInstance): Promise<void> {
     // حظر المسارات الداخلية قبل أي شيء آخر.
     // نرد 404 لا 403 حتى لا نؤكّد وجود هذه المسارات أصلًا.
     guards.push(async (req: FastifyRequest, reply: import('fastify').FastifyReply) => {
-      if (BLOCKED_PATH.test(req.url)) {
+      if (isBlockedPath(req.url)) {
         return reply.code(404).send({ code: 'NOT_FOUND', message: 'Not found' });
       }
     });
@@ -94,5 +88,3 @@ export async function proxyRoutes(app: FastifyInstance): Promise<void> {
     };
   }
 }
-
-export { config };
