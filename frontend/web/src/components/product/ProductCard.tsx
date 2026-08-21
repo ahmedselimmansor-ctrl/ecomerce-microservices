@@ -4,10 +4,17 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { useState } from 'react';
 import { Heart, Plus, Star, Loader2, Truck, Flame, ShoppingBag, Trophy, Clock, Store } from 'lucide-react';
+import type { LucideIcon } from 'lucide-react';
 import { toast } from 'sonner';
 import { useCart } from '@/store/cart';
 import { useWishlist } from '@/store/wishlist';
 import { formatMoney, formatCount, PLACEHOLDER_IMAGE } from '@/lib/format';
+import {
+  isUrgent,
+  selectSignal,
+  SIGNAL_LABEL,
+  type ProductSignal,
+} from '@/lib/product-signal';
 import { ApiError } from '@/lib/api';
 import type { ProductSummary } from '@/lib/schemas';
 
@@ -198,43 +205,36 @@ export function ProductCard({ product, priority = false, sponsored = false }: Pr
  * الندرة تسبق الشعبية تسبق
  * التوصيل. عرض كل الإشارات معًا يُضعف أثرها.
  */
+const SIGNAL_ICON: Record<ProductSignal, LucideIcon> = {
+  'low-stock': Flame,
+  'lowest-price': Clock,
+  bestseller: Trophy,
+  trending: ShoppingBag,
+  'free-delivery': Truck,
+};
+
+/** لون الأيقونة حين لا تكون الإشارة إلحاحًا — الإلحاح يلوّن السطر كله. */
+const SIGNAL_ICON_TONE: Partial<Record<ProductSignal, string>> = {
+  bestseller: 'text-tc-plum',
+  trending: 'text-tc-leaf',
+};
+
 function SignalLine({ product }: { product: ProductSummary }) {
-  if (product.tags.includes('low-stock')) {
-    return (
-      <p className="flex items-center gap-1 text-[11px] text-tc-berry">
-        <Flame className="size-3 shrink-0" aria-hidden />
-        Selling out fast
-      </p>
-    );
-  }
-  if (product.tags.includes('lowest-price')) {
-    return (
-      <p className="flex items-center gap-1 text-[11px] text-tc-berry">
-        <Clock className="size-3 shrink-0" aria-hidden />
-        Lowest price in 30 days
-      </p>
-    );
-  }
-  if (product.tags.includes('bestseller')) {
-    return (
-      <p className="flex items-center gap-1 text-[11px] text-tc-muted">
-        <Trophy className="size-3 shrink-0 text-tc-plum" aria-hidden />
-        Top rated in category
-      </p>
-    );
-  }
-  if (product.tags.includes('trending')) {
-    return (
-      <p className="flex items-center gap-1 text-[11px] text-tc-muted">
-        <ShoppingBag className="size-3 shrink-0 text-tc-leaf" aria-hidden />
-        500+ sold recently
-      </p>
-    );
-  }
+  const signal = selectSignal(product.tags);
+  const Icon = SIGNAL_ICON[signal];
+  const urgent = isUrgent(signal);
+
   return (
-    <p className="flex items-center gap-1 text-[11px] text-tc-muted">
-      <Truck className="size-3 shrink-0" aria-hidden />
-      Free Delivery
+    <p
+      className={`flex items-center gap-1 text-[11px] ${
+        urgent ? 'text-tc-berry' : 'text-tc-muted'
+      }`}
+    >
+      <Icon
+        className={`size-3 shrink-0 ${urgent ? '' : SIGNAL_ICON_TONE[signal] ?? ''}`}
+        aria-hidden
+      />
+      {SIGNAL_LABEL[signal]}
     </p>
   );
 }
