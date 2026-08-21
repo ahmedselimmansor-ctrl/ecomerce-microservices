@@ -75,21 +75,19 @@ await app.register(rateLimit, {
   keyGenerator: (req) => req.user?.id ?? req.ip,
   // حدود أضيق على مسارات إساءة الاستخدام المعتادة
   allowList: (req) => req.url.startsWith('/health'),
+  /*
+   * `statusCode` إلزامي هنا. بدونه يصل الكائن إلى setErrorHandler بلا حالة،
+   * فيُعامَل كخطأ مجهول ويردّ 500 — أي أن تجاوز الحدّ كان يبدو عطلًا في
+   * الخادم بدل رفضٍ مقصود، ويشجّع العميل على إعادة المحاولة فورًا بدل
+   * احترام Retry-After.
+   */
   errorResponseBuilder: (_req, ctx) => ({
+    statusCode: 429,
+    error: 'Too Many Requests',
     code: 'RATE_LIMITED',
     message: `Too many requests. Retry in ${Math.ceil(ctx.ttl / 1000)}s`,
   }),
 });
-
-await app.register(async (instance) => {
-  await instance.register(rateLimit, {
-    max: 10,
-    timeWindow: 60_000,
-    redis: instance.redis,
-    nameSpace: 'rl:auth:',
-    keyGenerator: (req) => req.ip,
-  });
-}, { prefix: '/api/v1/auth' });
 
 // ---------------------------------------------------------------- health
 

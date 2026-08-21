@@ -217,6 +217,43 @@ check "unknown route returns 404 not 500" \
 check "unknown catalog route returns 404" \
   "$(status "${GW}/api/v1/products/a/b/c")" 404
 
+# ------------------------------------------------------- 8. rate limiting
+echo ""
+echo "8) rate limiting"
+
+# المسار الحسّاس له حدّ خاص (10/دقيقة) لا الحدّ العام (300). التسجيل السابق
+# كان داخل نطاق مغلق بلا مسارات، فلم يُطبَّق قط ووقع الدخول تحت 300.
+redis_flush() {
+  docker exec "${COMPOSE_PROJECT_NAME:-topchoice}-redis-1" redis-cli \
+    --scan --pattern 'rl:*' 2>/dev/null \
+    | xargs -r -n50 docker exec -i "${COMPOSE_PROJECT_NAME:-topchoice}-redis-1" redis-cli del >/dev/null 2>&1 || true
+}
+
+if command -v docker >/dev/null 2>&1; then
+  redis_flush
+  LOGIN_CODES=$(for _ in $(seq 1 13); do
+    status -X POST "${GW}/api/v1/auth/login" -H 'content-type: application/json' \
+      -d '{"email":"nobody@example.com","password":"wrong"}'
+  done)
+  # نتحقق من الوقوع لا من عدده: تثبيت رقم دقيق يجعل الاختبار يفشل كلما
+  # استهلك اختبار سابق جزءًا من النافذة — وهو فشل في الاختبار لا في الكود.
+  check "auth route is rate limited" \
+    "$(echo "${LOGIN_CODES}" | grep -q 429 && echo yes || echo no)" yes
+  # الحدّ الخاص يجب أن يكون 10 لا 300: تسرّبٌ إلى الحدّ العام يعني أن
+  # تخمين كلمات المرور يحصل 300 محاولة في الدقيقة بدل 10.
+  check "auth limit is the strict one" \
+    "$(curl -s -D - -o /dev/null -X POST "${GW}/api/v1/auth/login" \
+       -H 'content-type: application/json' -d '{}' \
+       | awk 'tolower($1)=="x-ratelimit-limit:"{print $2}' | tr -d '\r')" 10
+
+  # تجاوز الحدّ رفضٌ مقصود لا عطل: 500 هنا كان يخفي السبب ويشجّع العميل
+  # على إعادة المحاولة فورًا بدل احترام Retry-After.
+  check "rate limit responds 429 not 500" \
+    "$(status -X POST "${GW}/api/v1/auth/login" -H 'content-type: application/json' \
+       -d '{"email":"nobody@example.com","password":"wrong"}')" 429
+  redis_flush
+fi
+
 # ------------------------------------------------------------------ summary
 echo ""
 echo "=============================================="

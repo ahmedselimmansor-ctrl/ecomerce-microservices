@@ -8,6 +8,15 @@ interface RouteDef {
   auth: 'required' | 'optional' | 'none';
   /** إعادة كتابة المسار قبل إرساله للخدمة الخلفية. */
   rewrite?: (path: string) => string;
+  /**
+   * حدّ معدّل أضيق من الحدّ العام لهذا المسار.
+   *
+   * <p>يُمرَّر عبر `config.rateLimit` على المسار نفسه لا بتسجيل الإضافة داخل
+   * نطاق مغلق: النطاق المغلق يحصر الحدّ في المسارات المسجَّلة داخله، وهذه
+   * مسجَّلة هنا — فكان الحدّ المشدَّد يُنشأ على نطاق فارغ ولا يُطبَّق أبدًا،
+   * وتقع محاولات الدخول تحت الحدّ العام (300) بدل 10.
+   */
+  rateLimit?: { max: number; timeWindow: number };
 }
 
 /**
@@ -17,7 +26,10 @@ interface RouteDef {
  * ومن يحتاج تسجيل دخول. المنطق يبقى داخل الخدمات.
  */
 const ROUTES: RouteDef[] = [
-  { prefix: '/api/v1/auth', target: services.identity, auth: 'none' },
+  // تخمين كلمات المرور يبدأ هنا: حدّ ضيق يجعل الهجوم غير عملي بلا إزعاج
+  // مستخدم يخطئ كلمته مرتين.
+  { prefix: '/api/v1/auth', target: services.identity, auth: 'none',
+    rateLimit: { max: 10, timeWindow: 60_000 } },
   { prefix: '/api/v1/users', target: services.identity, auth: 'required' },
   { prefix: '/api/v1/products', target: services.catalog, auth: 'none' },
   { prefix: '/api/v1/categories', target: services.catalog, auth: 'none' },
@@ -33,8 +45,28 @@ export async function proxyRoutes(app: FastifyInstance): Promise<void> {
   // ملاحظة: `@fastify/reply-from` يُسجَّل في الجذر (server.ts) لا هنا،
   // لأن التسجيل داخل إضافة يحصره في سياقها فلا تراه مسارات الإدارة.
   for (const route of ROUTES) {
-    app.all(`${route.prefix}`, { preHandler: preHandlerFor(app, route) }, handler(route));
-    app.all(`${route.prefix}/*`, { preHandler: preHandlerFor(app, route) }, handler(route));
+    const opts = {
+      preHandler: preHandlerFor(app, route),
+      ...(route.rateLimit
+        ? {
+            config: {
+              rateLimit: {
+                ...route.rateLimit,
+                /*
+                 * مفتاح مستقل لكل مسار له حدّ خاص. بدون البادئة يشترك
+                 * المسار مع الحدّ العام في نفس مفتاح Redis، فتستهلك تصفّحُ
+                 * المنتجات رصيدَ محاولات الدخول — ويصير الحدّ «١٠» رقمًا
+                 * يعتمد على ما فعله المستخدم قبله لا على محاولاته هو.
+                 */
+                keyGenerator: (req: FastifyRequest) =>
+                  `${route.prefix}:${req.user?.id ?? req.ip}`,
+              },
+            },
+          }
+        : {}),
+    };
+    app.all(`${route.prefix}`, opts, handler(route));
+    app.all(`${route.prefix}/*`, opts, handler(route));
   }
 
   function preHandlerFor(instance: FastifyInstance, route: RouteDef) {
