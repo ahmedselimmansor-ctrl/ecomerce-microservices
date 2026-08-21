@@ -140,7 +140,7 @@ class CatalogIndexer:
             "categoryPath": payload.get("categoryPath") or [],
             "priceMinor": price if isinstance(price, int) else 0,
             "wasMinor": payload.get("wasMinor"),
-            "currency": payload.get("currency") or "AED",
+            "currency": payload.get("currency") or "EGP",
             "image": images[0] if images else None,
             "rating": payload.get("rating") or 0.0,
             "ratingCount": payload.get("ratingCount") or 0,

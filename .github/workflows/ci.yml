@@ -119,6 +119,10 @@ jobs:
         working-directory: services/${{ matrix.service }}
         run: npm run build
 
+      - name: unit tests
+        working-directory: services/${{ matrix.service }}
+        run: npm test
+
   # ------------------------------------------------------------------ python
   python:
     name: python services
@@ -151,6 +155,10 @@ jobs:
         working-directory: services/${{ matrix.service }}
         run: python -c "import app.main"
 
+      - name: unit tests
+        working-directory: services/${{ matrix.service }}
+        run: python -m pytest -q
+
   # ---------------------------------------------------------------- frontend
   frontend:
     name: frontend
@@ -171,6 +179,14 @@ jobs:
       - name: typecheck
         working-directory: frontend/web
         run: npm run typecheck
+
+      - name: lint
+        working-directory: frontend/web
+        run: npm run lint
+
+      - name: unit tests
+        working-directory: frontend/web
+        run: npm test
 
       - name: build
         working-directory: frontend/web

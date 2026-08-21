@@ -64,8 +64,8 @@ topchoice:
   services:
     catalog-url: ${SERVICE_URL_CATALOG:http://localhost:8082}
   order:
-    free-shipping-threshold-minor: 10000     # 100.00 AED
-    shipping-fee-minor: 1500                 # 15.00 AED
+    free-shipping-threshold-minor: 50000     # 500.00 EGP
+    shipping-fee-minor: 3500                 # 35.00 EGP
     vat-percent: 5
 
 resilience4j:

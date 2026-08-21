@@ -12,7 +12,15 @@ const compat = new FlatCompat({ baseDirectory: dirname(fileURLToPath(import.meta
  */
 const config = [
   {
-    ignores: ['.next/**', 'node_modules/**', 'next-env.d.ts', 'tsconfig.tsbuildinfo'],
+    // dist-test ناتج tsc للاختبارات — كود مولَّد لا مصدر، وفحصه يُنتج
+    // أخطاء عن أسلوب استيراد لم نكتبه نحن.
+    ignores: [
+      '.next/**',
+      'node_modules/**',
+      'dist-test/**',
+      'next-env.d.ts',
+      'tsconfig.tsbuildinfo',
+    ],
   },
 
   ...compat.extends('next/core-web-vitals', 'next/typescript'),

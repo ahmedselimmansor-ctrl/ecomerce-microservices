@@ -10,3 +10,7 @@ pydantic-settings==2.6.1
 httpx==0.28.0
 prometheus-fastapi-instrumentator==7.0.0
 orjson==3.10.12
+
+# اختبارات
+pytest==8.3.4
+pytest-asyncio==0.25.2

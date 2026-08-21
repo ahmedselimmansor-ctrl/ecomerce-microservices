@@ -46,7 +46,7 @@ public final class CatalogDtos {
                     p.getBrand() == null ? null : p.getBrand().id(),
                     p.getBrand() == null ? null : p.getBrand().name(),
                     p.getCategoryPath(),
-                    price == null ? "AED" : price.currency(),
+                    price == null ? "EGP" : price.currency(),
                     price == null ? 0 : price.amountMinor(),
                     price == null ? null : price.wasMinor(),
                     price == null ? null : price.discountPercent(),
@@ -76,7 +76,7 @@ public final class CatalogDtos {
             return new ProductSummary(
                     p.getSku(), p.getSlug(), p.titleFor(locale),
                     p.getBrand() == null ? null : p.getBrand().name(),
-                    price == null ? "AED" : price.currency(),
+                    price == null ? "EGP" : price.currency(),
                     price == null ? 0 : price.amountMinor(),
                     price == null ? null : price.wasMinor(),
                     price == null ? null : price.discountPercent(),

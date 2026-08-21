@@ -8,7 +8,7 @@ type TemplateData = Record<string, unknown>;
 
 const money = (minor: unknown, currency: unknown): string => {
   const amount = typeof minor === 'number' ? minor : Number(minor ?? 0);
-  return `${(amount / 100).toFixed(2)} ${String(currency ?? 'AED')}`;
+  return `${(amount / 100).toFixed(2)} ${String(currency ?? 'EGP')}`;
 };
 
 const escape = (value: unknown): string =>
@@ -97,11 +97,11 @@ export const templates: Record<string, (data: TemplateData) => RenderedMessage> 
   welcome: (data) => {
     const name = escape(data['fullName'] ?? 'عميلنا العزيز');
     return {
-      subject: 'أهلًا بك في topchoice',
+      subject: 'أهلًا بك في TopChoice',
       html: layout('مرحبًا', `
         <h2 style="margin:0 0 12px">أهلًا ${name}!</h2>
         <p>حسابك جاهز الآن. استمتع بتجربة تسوّق سريعة وآمنة.</p>`),
-      text: `أهلًا ${name}! حسابك في topchoice جاهز.`,
+      text: `أهلًا ${name}! حسابك في TopChoice جاهز.`,
     };
   },
 };

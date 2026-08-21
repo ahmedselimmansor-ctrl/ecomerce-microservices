@@ -15,8 +15,14 @@ export interface Cart {
 
 const USER_TTL_SECONDS = 60 * 60 * 24 * 90; // 90 يومًا
 const GUEST_TTL_SECONDS = 60 * 60 * 24 * 30; // 30 يومًا
-const MAX_DISTINCT_ITEMS = 100;
-const MAX_QUANTITY_PER_ITEM = 20;
+// الحدود والقواعد في وحدة واحدة: تكرارها هنا كان يعني أن تعديل السقف في
+// مكان دون الآخر يمرّ صامتًا، ويصير للسلة سلوكان مختلفان.
+import {
+  MAX_DISTINCT_ITEMS,
+  MAX_QUANTITY_PER_ITEM,
+  mergedQuantity,
+  nextQuantityOnAdd,
+} from './cart-rules.js';
 
 /**
  * السلة في Redis لا في قاعدة بيانات علائقية.
@@ -71,10 +77,7 @@ export class CartStore {
     }
 
     const existing = existingRaw ? (JSON.parse(existingRaw) as CartItem) : null;
-    const newQuantity = Math.min(
-      (existing?.quantity ?? 0) + quantity,
-      MAX_QUANTITY_PER_ITEM,
-    );
+    const newQuantity = nextQuantityOnAdd(existing?.quantity ?? 0, quantity);
 
     const item: CartItem = {
       sku,
@@ -169,10 +172,7 @@ export class CartStore {
 
       const merged: CartItem = {
         sku,
-        quantity: Math.min(
-          Math.max(guestItem.quantity, userItem?.quantity ?? 0),
-          MAX_QUANTITY_PER_ITEM,
-        ),
+        quantity: mergedQuantity(guestItem.quantity, userItem?.quantity ?? 0),
         addedAt: userItem?.addedAt ?? guestItem.addedAt,
       };
       pipeline.hset(userKey, sku, JSON.stringify(merged));

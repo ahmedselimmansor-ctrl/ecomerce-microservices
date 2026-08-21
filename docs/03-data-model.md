@@ -120,7 +120,7 @@ refunds(id UUID PK, payment_id UUID FK, amount_minor BIGINT,
   description: { ar: "...", en: "..." },
   brand: { id: "apple", name: "Apple" },
   categoryPath: ["electronics", "mobiles", "smartphones"],
-  price:      { currency: "AED", amountMinor: 299900, wasMinor: 349900 },
+  price:      { currency: "EGP", amountMinor: 299900, wasMinor: 349900 },
   images: ["https://cdn.../1.jpg"],
   attributes: { color: "Black", storage: "128GB", ram: "6GB" },  // متغيّر لكل قسم
   variants: [ { sku: "...", attributes: { color: "Blue" }, priceMinor: 299900 } ],
@@ -354,7 +354,7 @@ db.products.createIndex({ "title.ar": "text", "title.en": "text", tags: "text" }
 
 ```json
 // order.created
-{ "orderId":"...", "userId":"...", "currency":"AED", "totalMinor":299900,
+{ "orderId":"...", "userId":"...", "currency":"EGP", "totalMinor":299900,
   "items":[{"sku":"TC-APL-IP15-128-BLK","quantity":1,"unitPriceMinor":299900}] }
 
 // inventory.reserved / inventory.rejected

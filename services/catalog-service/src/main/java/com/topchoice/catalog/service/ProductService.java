@@ -170,7 +170,7 @@ public class ProductService {
     public ProductView updatePrice(String sku, PriceUpdateRequest req, String traceId) {
         Product p = repo.findBySku(sku)
                 .orElseThrow(() -> ApiException.notFound("PRODUCT_NOT_FOUND", "Product not found"));
-        String currency = p.getPrice() == null ? "AED" : p.getPrice().currency();
+        String currency = p.getPrice() == null ? "EGP" : p.getPrice().currency();
         p.setPrice(new Product.Price(currency, req.priceMinor(), req.wasMinor()));
         p.setUpdatedAt(Instant.now());
         Product saved = repo.save(p);

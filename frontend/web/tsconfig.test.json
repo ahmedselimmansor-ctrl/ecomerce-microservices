@@ -1,0 +1,23 @@
+{
+  // إعداد منفصل للاختبارات.
+  //
+  // tsconfig الأساسي مضبوط لـ Next.js: `module: esnext` و
+  // `moduleResolution: bundler` — لا يُصدِر شيئًا ويعتمد على المُجمِّع.
+  // مُشغّل node:test يحتاج وحدات ES صالحة على القرص بامتدادات صريحة،
+  // فنُصدِرها هنا بـ NodeNext إلى مجلد مؤقت.
+  //
+  // نقتصر على src/lib لأن ما فيه دوال نقية: مكوّنات React تحتاج DOM
+  // ومُصيَّرًا، وهو ثمن أعلى من قيمته لتغطية منطق موجود أصلًا في الخادم.
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
+    "noEmit": false,
+    "outDir": "dist-test",
+    "declaration": false,
+    "sourceMap": false,
+    "jsx": "react-jsx",
+    "types": ["node"]
+  },
+  "include": ["src/lib/format.ts", "src/lib/format.test.ts"]
+}

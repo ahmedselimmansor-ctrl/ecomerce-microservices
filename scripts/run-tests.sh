@@ -44,7 +44,7 @@ for svc in api-gateway cart-service notification-service; do
     -v "$PWD/services/${svc}:/app" \
     -w /app \
     node:22-alpine \
-    sh -c "npm install --no-audit --no-fund --silent && npm run typecheck"
+    sh -c "npm install --no-audit --no-fund --silent && npm run typecheck && npm test"
 done
 
 # -------------------------------------------------------------------- python
@@ -54,7 +54,7 @@ for svc in search-service recommendation-service; do
     -v "$PWD/services/${svc}:/app" \
     -w /app \
     python:3.12-slim \
-    sh -c "pip install -q -r requirements.txt ruff && ruff check app/ && python -c 'import app.main'"
+    sh -c "pip install -q -r requirements.txt ruff && ruff check app/ && python -c 'import app.main' && python -m pytest -q"
 done
 
 # ------------------------------------------------------------------ frontend
@@ -63,7 +63,7 @@ run "frontend · web" docker run --rm \
   -v "$PWD/frontend/web:/app" \
   -w /app \
   node:22-alpine \
-  sh -c "npm install --no-audit --no-fund --silent && npm run typecheck"
+  sh -c "npm install --no-audit --no-fund --silent && npm run typecheck && npm run lint && npm test"
 
 # ------------------------------------------------------------------- infra
 

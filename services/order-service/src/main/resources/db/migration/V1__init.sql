@@ -5,7 +5,7 @@ CREATE TABLE orders (
     order_number     VARCHAR(32) NOT NULL UNIQUE,
     user_id          UUID        NOT NULL,
     status           VARCHAR(32) NOT NULL DEFAULT 'PENDING',
-    currency         CHAR(3)     NOT NULL DEFAULT 'AED',
+    currency         CHAR(3)     NOT NULL DEFAULT 'EGP',
     -- كل المبالغ بالوحدة الصغرى (فلس) كأعداد صحيحة — لا floating point في المال
     subtotal_minor   BIGINT      NOT NULL DEFAULT 0,
     shipping_minor   BIGINT      NOT NULL DEFAULT 0,

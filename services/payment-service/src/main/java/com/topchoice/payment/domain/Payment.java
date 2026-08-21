@@ -32,7 +32,7 @@ public class Payment {
     private long amountMinor;
 
     @Column(nullable = false, columnDefinition = "bpchar(3)")
-    private String currency = "AED";
+    private String currency = "EGP";
 
     @Column(nullable = false, length = 24)
     private String method;

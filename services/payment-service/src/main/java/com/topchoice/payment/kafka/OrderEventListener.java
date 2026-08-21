@@ -62,7 +62,7 @@ public class OrderEventListener {
         UUID orderId = UUID.fromString(p.path("orderId").asText(event.aggregateId()));
         UUID userId = UUID.fromString(p.path("userId").asText());
         long amount = p.path("amountMinor").asLong();
-        String currency = p.path("currency").asText("AED");
+        String currency = p.path("currency").asText("EGP");
         String method = p.path("method").asText("CARD");
 
         if (amount <= 0) {

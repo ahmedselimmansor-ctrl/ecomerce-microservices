@@ -31,7 +31,7 @@ public class Order {
     private OrderStatus status = OrderStatus.PENDING;
 
     @Column(nullable = false, columnDefinition = "bpchar(3)")
-    private String currency = "AED";
+    private String currency = "EGP";
 
     @Column(name = "subtotal_minor", nullable = false)
     private long subtotalMinor;
