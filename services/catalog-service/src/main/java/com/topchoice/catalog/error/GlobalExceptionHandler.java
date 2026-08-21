@@ -7,6 +7,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.servlet.resource.NoResourceFoundException;
 
 import java.time.Instant;
 import java.util.LinkedHashMap;
@@ -37,6 +38,21 @@ public class GlobalExceptionHandler {
                 .forEach(fe -> details.putIfAbsent(fe.getField(), fe.getDefaultMessage()));
         return ResponseEntity.badRequest()
                 .body(ErrorResponse.of("VALIDATION_ERROR", "Request validation failed", details));
+    }
+
+    /**
+     * مسار غير موجود.
+     *
+     * <p>بدون هذا المعالج تلتقط {@code handleUnexpected} استثناء Spring
+     * ‎NoResourceFoundException‎ فتردّ 500 على كل عنوان خاطئ، وتكتب stack
+     * trace كامل بمستوى ERROR. النتيجة ضجيج يخفي الأعطال الحقيقية، ودلالة
+     * خاطئة تجعل الفاحص يظن أن الخدمة معطوبة لا أن المسار غير موجود.
+     */
+    @ExceptionHandler(NoResourceFoundException.class)
+    public ResponseEntity<ErrorResponse> handleNoResource(NoResourceFoundException ex) {
+        log.debug("no route for {}", ex.getResourcePath());
+        return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                .body(ErrorResponse.of("NOT_FOUND", "Not found", null));
     }
 
     @ExceptionHandler(Exception.class)

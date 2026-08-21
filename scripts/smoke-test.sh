@@ -209,6 +209,14 @@ check "admin write blocked via encoding" \
 check "similar segment not over-blocked" \
   "$(status "${GW}/api/v1/search?q=admin")" 200
 
+# مسار غير موجود على خدمة Java كان يردّ 500 ويكتب stack trace بمستوى ERROR:
+# دلالة خاطئة تجعل الفاحص يظن الخدمة معطوبة، وضجيج يخفي الأعطال الحقيقية.
+check "unknown route returns 404 not 500" \
+  "$(status "${GW}/api/v1/orders/00000000-0000-0000-0000-000000000000/nope" \
+     -H "authorization: Bearer ${TOKEN}")" 404
+check "unknown catalog route returns 404" \
+  "$(status "${GW}/api/v1/products/a/b/c")" 404
+
 # ------------------------------------------------------------------ summary
 echo ""
 echo "=============================================="
