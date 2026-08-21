@@ -7,6 +7,7 @@ import io.micrometer.core.instrument.MeterRegistry;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
@@ -26,10 +27,17 @@ import java.util.concurrent.atomic.AtomicLong;
  * بعد الإرسال وقبل تحديث {@code published_at}، ولهذا كل مستهلك في النظام
  * لديه جدول {@code processed_events}.
  *
- * <p><b>بديل الإنتاج:</b> Debezium على MSK Connect يقرأ WAL مباشرة، فيلغي
- * الاستطلاع الدوري ويقلّل زمن النشر إلى أجزاء من الثانية.
+ * <p><b>بديل الإنتاج:</b> Debezium يقرأ WAL الخاص بـ Cloud SQL مباشرة،
+ * فيلغي الاستطلاع الدوري ويقلّل زمن النشر إلى أجزاء من الثانية.
+ *
+ * <p>يمكن إطفاؤه بـ {@code topchoice.outbox.relay-enabled=false}: اختبارات
+ * التكامل تحتاج ذلك وإلا نافس المُرحِّل المجدول الاختبارَ على الصفوف نفسها
+ * فصار الاختبار متقطّعًا. ومفيد تشغيليًا أيضًا — عزل النشر عن الكتابة عند
+ * تشخيص عطل في Kafka.
  */
 @Component
+@ConditionalOnProperty(name = "topchoice.outbox.relay-enabled",
+        havingValue = "true", matchIfMissing = true)
 public class OutboxRelay {
 
     private static final Logger log = LoggerFactory.getLogger(OutboxRelay.class);

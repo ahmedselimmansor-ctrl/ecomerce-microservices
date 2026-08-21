@@ -71,7 +71,7 @@ admin-test: ## اختبار لوحة التحكم (صلاحيات + CRUD)
 integration: ## اختبارات تكامل على PostgreSQL حقيقى (تتطلب `make up`)
 	@# اختبارات *IT لا يشغّلها `mvn test` عمدًا: تحتاج قاعدة بيانات تعمل،
 	@# واختبار وحدة يفشل على جهاز لم يشغّل الاستاك تُتجاهَل نتيجته سريعًا.
-	@for svc in inventory-service; do \
+	@for svc in inventory-service order-service; do \
 	  echo "── $$svc ──"; \
 	  docker run --rm -v "$$PWD/services/$$svc:/app" -v topchoice-m2:/root/.m2 \
 	    --network host -w /app maven:3.9-eclipse-temurin-21 mvn -B verify; \

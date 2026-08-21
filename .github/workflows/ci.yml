@@ -312,8 +312,11 @@ jobs:
           cache: maven
 
       - name: integration tests on real postgres
-        working-directory: services/inventory-service
-        run: mvn -B verify
+        run: |
+          for svc in inventory-service order-service; do
+            echo "── $svc ──"
+            (cd "services/$svc" && mvn -B verify)
+          done
         env:
           IT_POSTGRES_HOST: localhost
           IT_POSTGRES_PORT: '5432'
