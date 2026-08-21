@@ -73,6 +73,27 @@
         <groupId>org.springframework.boot</groupId>
         <artifactId>spring-boot-maven-plugin</artifactId>
       </plugin>
+
+      <!--
+        اختبارات التكامل (*IT) تحتاج PostgreSQL يعمل، فلا يشغّلها surefire
+        مع اختبارات الوحدة: اختبار وحدة يجب أن يعمل على أي جهاز بلا بنية
+        تحتية، وإلا صار «فاشل» على جهاز مطوّر لم يشغّل الاستاك بعد فتُتجاهَل
+        نتيجته — وهي أسرع طريقة لموت مجموعة اختبارات.
+
+        failsafe يشغّلها في `mvn verify` وحده.
+      -->
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-failsafe-plugin</artifactId>
+        <executions>
+          <execution>
+            <goals>
+              <goal>integration-test</goal>
+              <goal>verify</goal>
+            </goals>
+          </execution>
+        </executions>
+      </plugin>
     </plugins>
   </build>
 </project>

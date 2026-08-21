@@ -302,6 +302,22 @@ jobs:
       - name: admin dashboard test
         run: ./scripts/admin-test.sh
 
+      # اختبارات التكامل تحتاج PostgreSQL يعمل، وهو قائم هنا بالفعل.
+      # تفحص ما لا تراه اختبارات الوحدة: القفل التشاؤمي تحت تزاحم حقيقي،
+      # وقيود CHECK التي تعيش في المخطّط لا في الكود.
+      - uses: actions/setup-java@v4
+        with:
+          java-version: '21'
+          distribution: temurin
+          cache: maven
+
+      - name: integration tests on real postgres
+        working-directory: services/inventory-service
+        run: mvn -B verify
+        env:
+          IT_POSTGRES_HOST: localhost
+          IT_POSTGRES_PORT: '5432'
+
       - name: dump logs on failure
         if: failure()
         run: docker compose -f deploy/docker-compose.yml --env-file .env logs --tail=200
