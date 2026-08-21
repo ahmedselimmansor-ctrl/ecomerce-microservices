@@ -47,7 +47,7 @@ refresh_tokens(
 
 ```sql
 orders(
-  id UUID PK, order_number TEXT UNIQUE,     -- N-2026-000123
+  id UUID PK, order_number TEXT UNIQUE,     -- TC-2026-000123
   user_id UUID, status TEXT,                -- PENDING|AWAITING_PAYMENT|CONFIRMED|SHIPPED|DELIVERED|CANCELLED|REFUNDED
   currency CHAR(3), subtotal_minor BIGINT, shipping_minor BIGINT,
   discount_minor BIGINT, tax_minor BIGINT, total_minor BIGINT,

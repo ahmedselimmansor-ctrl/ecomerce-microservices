@@ -349,8 +349,20 @@ public class OrderService {
                 "items", items);
     }
 
+    /**
+     * رقم الطلب المعروض للعميل.
+     *
+     * <p>يظهر في كل بريد وفاتورة وشاشة تتبّع، فهو أكثر ما يقرؤه العميل من
+     * معرّفاتنا. البادئة {@code TC} تخصّ العلامة، والسنة تجعل الرقم مفهومًا
+     * لخدمة العملاء دون فتح قاعدة البيانات.
+     *
+     * <p>ليس معرّفًا داخليًا: المعرّف هو الـ UUID. الفصل مقصود حتى نستطيع
+     * تغيير شكل الرقم المعروض دون لمس المفاتيح.
+     */
+    static final String ORDER_NUMBER_PREFIX = "TC";
+
     private String nextOrderNumber() {
-        return "N-" + LocalDate.now().getYear() + "-" + orders.nextOrderNumber();
+        return ORDER_NUMBER_PREFIX + "-" + LocalDate.now().getYear() + "-" + orders.nextOrderNumber();
     }
 
     /**

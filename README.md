@@ -18,7 +18,7 @@
 | **السحابة** | Google Cloud — GKE · Cloud SQL · Memorystore · Managed Kafka · Firestore |
 | **التخزين** | PostgreSQL · MongoDB · Redis · OpenSearch · Cloud Storage |
 | **الاتساق** | Saga بالتنسيق + Transactional Outbox + مفاتيح تعطيل التكرار |
-| **الاختبارات** | 248 اختبار وحدة عبر الخدمات العشر والواجهة · 39 حالة تكامل على المتجر · 28 على لوحة التحكم |
+| **الاختبارات** | 248 اختبار وحدة عبر الخدمات العشر والواجهة · 40 حالة تكامل على المتجر · 28 على لوحة التحكم |
 | **التشغيل المحلي** | `make up` — عشرون حاوية، بلا تسطيب Java أو Python على جهازك |
 
 ```bash
@@ -443,7 +443,7 @@ flowchart LR
 ```bash
 make up      # عشرون حاوية: قواعد البيانات + Kafka + OpenSearch + المحاكيات + الخدمات
 make seed    # بيانات تجريبية
-make smoke        # 39 حالة تكامل على المتجر
+make smoke        # 40 حالة تكامل على المتجر
 make admin-test   # 28 حالة تكامل على لوحة التحكم
 make test         # اختبارات الوحدة لكل الخدمات + فحص البنية
 make down    # إيقاف

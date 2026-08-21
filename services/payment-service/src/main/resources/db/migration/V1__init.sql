@@ -6,7 +6,7 @@ CREATE TABLE payments (
     order_id     UUID        NOT NULL UNIQUE,
     user_id      UUID        NOT NULL,
     amount_minor BIGINT      NOT NULL CHECK (amount_minor > 0),
-    currency     CHAR(3)     NOT NULL DEFAULT 'EGP',
+    currency     CHAR(3)     NOT NULL DEFAULT 'AED',
     method       VARCHAR(24) NOT NULL,
     status       VARCHAR(24) NOT NULL DEFAULT 'REQUIRES_AUTH',
     provider     VARCHAR(24) NOT NULL DEFAULT 'mock',

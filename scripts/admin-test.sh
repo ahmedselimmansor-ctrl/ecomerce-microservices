@@ -6,7 +6,7 @@
 set -uo pipefail
 
 GW="${GATEWAY_URL:-http://localhost:8080}"
-SKU="N-ADMIN-TEST-$$"
+SKU="TC-ADM-TEST-$$"
 PASS=0
 FAIL=0
 
