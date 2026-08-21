@@ -72,6 +72,8 @@ if command -v kubectl >/dev/null 2>&1; then
   run "k8s · kustomize prod" kubectl kustomize infra/k8s/overlays/prod
 fi
 
+run "db · migrations append-only" ./scripts/check-migrations.sh
+
 run "api · admin dashboard" ./scripts/admin-test.sh
 
 run "terraform · fmt" docker run --rm -v "$PWD/infra/terraform:/wd" -w /wd \

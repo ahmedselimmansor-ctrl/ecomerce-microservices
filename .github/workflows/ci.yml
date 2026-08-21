@@ -70,13 +70,23 @@ jobs:
           - payment-service
           - inventory-service
     steps:
+      # fetch-depth 0: حارس الترحيلات يقارن بفرع الأساس، و checkout
+      # الافتراضي يجلب commit واحدًا فلا يجد ما يقارن به.
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - uses: actions/setup-java@v4
         with:
           java-version: '21'
           distribution: temurin
           cache: maven
+
+      # الترحيل المدموج لا يُعدَّل: بصمته محفوظة في كل قاعدة طُبِّق عليها،
+      # وتغييرها يوقف الخدمة على البيئات القائمة وحدها — فقاعدة CI النظيفة
+      # لا ترى العطل. الفحص على git لا على قاعدة بيانات لهذا السبب.
+      - name: migrations are append-only
+        run: ./scripts/check-migrations.sh origin/${{ github.base_ref || 'main' }}
 
       - name: build and test
         working-directory: services/${{ matrix.service }}
