@@ -31,6 +31,10 @@ x-java-env: &java-env
   JWT_SECRET: ${JWT_SECRET:?JWT_SECRET is required}
   LOG_LEVEL: ${LOG_LEVEL:-INFO}
   SPRING_PROFILES_ACTIVE: docker
+  # بيانات العرض (عميل ومشرف ومخزون) تُبذر محليًا فقط. الترحيلات نفسها تُطبَّق
+  # في كل بيئة، لكنها لا تُدخل صفًا ما لم تُرفع هذه العلامة — فلا يصل حساب
+  # مشرف بكلمة مرور موثّقة إلى الإنتاج بالسهو.
+  SEED_DEMO_DATA: ${SEED_DEMO_DATA:-true}
 
 services:
 
@@ -48,7 +52,10 @@ services:
       - pgdata:/var/lib/postgresql/data
       - ./init/postgres-init.sh:/docker-entrypoint-initdb.d/10-create-databases.sh:ro
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-topchoice}"]
+      # ‎-d postgres‎ صراحةً: بدونه يفترض pg_isready قاعدة باسم المستخدم،
+      # وهي غير موجودة هنا — فيسجّل FATAL كل خمس ثوانٍ ويُغرق سجل قاعدة
+      # البيانات بضجيج يخفي الأعطال الحقيقية.
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-topchoice} -d postgres"]
       interval: 5s
       timeout: 3s
       retries: 20
@@ -206,9 +213,12 @@ services:
       driver: json-file
       options: { max-size: "10m", max-file: "3" }
     depends_on:
-      pubsub-emulator: { condition: service_started }
-      firestore-emulator: { condition: service_started }
-      fake-gcs: { condition: service_started }
+      # service_healthy لا service_started: الثاني يعني «انطلقت الحاوية» بينما
+      # محاكيات JVM تحتاج عشرات الثواني بعدها لتبدأ الاستماع. الفرق يظهر فقط
+      # تحت الحمل — حين تقلع الحاويات كلها معًا — فيفشل التهيئة بشكل متقطّع.
+      pubsub-emulator: { condition: service_healthy }
+      firestore-emulator: { condition: service_healthy }
+      fake-gcs: { condition: service_healthy }
     environment:
       GOOGLE_CLOUD_PROJECT: ${GOOGLE_CLOUD_PROJECT:-topchoice-local}
       GCS_MEDIA_BUCKET: ${GCS_MEDIA_BUCKET:-topchoice-media-local}

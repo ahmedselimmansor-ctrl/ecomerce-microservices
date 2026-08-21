@@ -72,7 +72,8 @@ class CatalogIndexer:
                 to_index: list[dict[str, Any]] = []
                 to_delete: list[str] = []
 
-                for _partition, messages in batches.items():
+                # المفتاح (TopicPartition) لا يُستعمل — نستهلك القيم فقط
+                for messages in batches.values():
                     for message in messages:
                         try:
                             event = json.loads(message.value)

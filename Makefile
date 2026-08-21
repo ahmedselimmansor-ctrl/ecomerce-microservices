@@ -10,7 +10,13 @@ help: ## عرض الأوامر المتاحة
 		awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-20s\033[0m %s\n", $$1, $$2}'
 
 .env:
-	@cp .env.example .env && echo "created .env from .env.example"
+	@cp .env.example .env
+	@# مفتاح عشوائي لكل بيئة محلية: نشر مفتاح في المستودع يعني أن كل من
+	@# استنسخ المشروع يستطيع تزوير توكنات أي نشر نسي ضبط المتغيّر.
+	@SECRET=$$(openssl rand -base64 48 2>/dev/null | tr -d '\n/+=' | head -c 64); \
+	  if [ -z "$$SECRET" ]; then SECRET=$$(head -c 48 /dev/urandom | od -An -tx1 | tr -d ' \n'); fi; \
+	  sed -i.bak "s|^JWT_SECRET=.*|JWT_SECRET=$$SECRET|" .env && rm -f .env.bak
+	@echo "created .env from .env.example (JWT_SECRET generated)"
 
 # ---------------------------------------------------------------- local dev
 

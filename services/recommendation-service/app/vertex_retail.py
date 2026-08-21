@@ -1,5 +1,5 @@
 """
-تكامل Vertex AI Search for commerce (‏Retail API).
+تكامل Vertex AI Search for commerce (Retail API).
 
 نماذج التقديم المستخدمة (serving configs):
   * ``recommended-for-you`` — «مقترح لك» على الصفحة الرئيسية
@@ -66,19 +66,19 @@ class RetailClient:
             try:
                 self._prediction = retail_v2.PredictionServiceClient(client_options=options)
                 log.info("Vertex AI Search for commerce prediction client initialised")
-            except Exception:  # noqa: BLE001
+            except Exception:
                 log.exception("failed to init Retail prediction client — using local fallback")
 
         if settings.retail_serving_config_ranking:
             try:
                 self._search = retail_v2.SearchServiceClient(client_options=options)
-            except Exception:  # noqa: BLE001
+            except Exception:
                 log.exception("failed to init Retail search client")
 
         if settings.retail_user_events_enabled:
             try:
                 self._events = retail_v2.UserEventServiceClient(client_options=options)
-            except Exception:  # noqa: BLE001
+            except Exception:
                 log.exception("failed to init Retail user-event client")
 
     @property
@@ -219,7 +219,7 @@ class RetailClient:
 
         retail_event_type = _EVENT_TYPES.get(event_type)
         if not retail_event_type:
-            # ‏search يشترط searchQuery و purchase يشترط
+            # search يشترط searchQuery و purchase يشترط
             # purchaseTransaction.revenue، وكلاهما لا يصل إلى هذه الطبقة.
             # إرسال حدث ناقص يرفضه الـ API ويملأ السجل بأخطاء بلا فائدة؛
             # صاحب البيانات هو من ينشرهما (search-service و order-service).
@@ -228,7 +228,7 @@ class RetailClient:
             log.debug("event type %s has no Retail equivalent — skipped", event_type)
             return
 
-        # ‏visitor_id هوية الجلسة و user_info.user_id هوية الحساب: الفصل
+        # visitor_id هوية الجلسة و user_info.user_id هوية الحساب: الفصل
         # بينهما هو ما يسمح لـ Retail بربط تصفّح الزائر بحسابه بعد الدخول.
         event = retail_v2.UserEvent(
             event_type=retail_event_type,

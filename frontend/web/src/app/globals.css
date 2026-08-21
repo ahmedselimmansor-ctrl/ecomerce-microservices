@@ -46,7 +46,7 @@
   /*
    * اسم متغيّر next/font يجب أن يخالف مفتاح Tailwind: لو تطابقا صار التعريف
    * `--font-display: var(--font-display)` مرجعًا لنفسه، وهو باطل في CSS
-   * فيسقط الخط بصمت. لذلك: ‎--font-brand‎ يحمل الخط، ‎--font-display‎ يستهلكه.
+   * فيسقط الخط بصمت. لذلك: --font-brand يحمل الخط، --font-display يستهلكه.
    */
   --font-sans: var(--font-app), system-ui, -apple-system, "Segoe UI", sans-serif;
   --font-display: var(--font-brand), var(--font-app), system-ui, sans-serif;

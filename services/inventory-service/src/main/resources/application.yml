@@ -23,6 +23,10 @@ spring:
   flyway:
     enabled: true
     baseline-on-migrate: true
+    placeholders:
+      # بيانات العرض مطفأة افتراضيًا. الترحيل يُطبَّق في كل بيئة فتبقى
+      # بصمته وسجل Flyway متسقين، لكنه لا يُدخل صفًا ما لم تُرفع العلامة.
+      seedDemoData: ${SEED_DEMO_DATA:false}
   kafka:
     bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
     producer:

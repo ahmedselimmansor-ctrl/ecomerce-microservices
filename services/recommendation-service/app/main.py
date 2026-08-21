@@ -3,8 +3,9 @@ from __future__ import annotations
 import asyncio
 import logging
 import time
+from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
-from typing import Annotated, Any, AsyncIterator
+from typing import Annotated, Any
 
 from fastapi import BackgroundTasks, FastAPI, Header, HTTPException, Query, Request
 from fastapi.responses import ORJSONResponse
@@ -140,8 +141,10 @@ async def related(
             if cached:
                 import orjson
                 return orjson.loads(cached)
-        except Exception:  # noqa: BLE001
-            pass
+        except Exception:
+            # سقوط الكاش لا يُسقط الطلب — نُكمل إلى المصدر. لكن الصمت التام
+            # يخفي انقطاع Redis كليًا، فنسجّل على debug لا error.
+            log.debug("تعذّرت قراءة كاش التوصيات", exc_info=True)
 
     result = await asyncio.to_thread(retail.related_items, sku, x_user_id, limit)
     skus = result if result else await fallback.related(sku, limit)
@@ -151,8 +154,8 @@ async def related(
         try:
             import orjson
             await redis.setex(cache_key, settings.cache_ttl_seconds, orjson.dumps(items))
-        except Exception:  # noqa: BLE001
-            pass
+        except Exception:
+            log.debug("تعذّرت كتابة كاش التوصيات", exc_info=True)
 
     return items
 

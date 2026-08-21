@@ -6,7 +6,12 @@ import asyncio
 import logging
 from typing import Any
 
-from opensearchpy import AsyncOpenSearch, NotFoundError, RequestError
+from opensearchpy import (
+    AsyncOpenSearch,
+    AuthorizationException,
+    NotFoundError,
+    RequestError,
+)
 
 from .config import Settings
 from .index_mapping import FACET_FIELDS, INDEX_SETTINGS
@@ -61,6 +66,19 @@ class SearchEngine:
                 await self.client.indices.create(index=self.index, body=INDEX_SETTINGS)
                 log.info("created index %s", self.index)
                 return True
+            except AuthorizationException as exc:
+                # ليست حالة عابرة: إعادة المحاولة عشر مرات لن تغيّر شيئًا،
+                # فنفشل فورًا برسالة تقول ما العمل بدل أن نُغرق السجل.
+                log.error(
+                    "إنشاء الفهرس %s محجوب (403). السبب الأشيع أن OpenSearch رفع "
+                    "cluster.blocks.create_index بعد امتلاء القرص — وهي كتلة دائمة "
+                    "لا تُرفع تلقائيًا بعد تحرير المساحة. الحل: فرّغ القرص ثم "
+                    'PUT _cluster/settings {"persistent":{"cluster.blocks.create_index":null}} '
+                    "ثم احذف الفهرس ليُعاد إنشاؤه بالخريطة الصريحة. التفاصيل: %s",
+                    self.index,
+                    exc,
+                )
+                return False
             except RequestError as exc:
                 # 400 resource_already_exists — نسخة أخرى سبقتنا، وهذا مقبول
                 if getattr(exc, "error", "") == "resource_already_exists_exception":

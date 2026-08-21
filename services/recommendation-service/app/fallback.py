@@ -78,7 +78,7 @@ class FallbackEngine:
 
         try:
             await pipe.execute()
-        except Exception:  # noqa: BLE001
+        except Exception:
             log.warning("failed recording interaction", exc_info=True)
 
     # ------------------------------------------------------ recommendations
@@ -95,7 +95,7 @@ class FallbackEngine:
             await self.redis.zunionstore(dest, keys)
             await self.redis.expire(dest, 300)
             return await self.redis.zrevrange(dest, 0, limit - 1)
-        except Exception:  # noqa: BLE001
+        except Exception:
             log.warning("trending computation failed", exc_info=True)
             return []
 

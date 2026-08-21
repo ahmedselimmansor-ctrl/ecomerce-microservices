@@ -31,10 +31,17 @@ spring:
   flyway:
     enabled: true
     baseline-on-migrate: true
+    placeholders:
+      # بيانات العرض مطفأة افتراضيًا. الترحيل يُطبَّق في كل بيئة فتبقى
+      # بصمته وسجل Flyway متسقين، لكنه لا يُدخل صفًا ما لم تُرفع العلامة.
+      seedDemoData: ${SEED_DEMO_DATA:false}
 
 topchoice:
   jwt:
-    secret: ${JWT_SECRET:local-dev-only-change-me-9f2b7c1d4e6a8b0c2d4e6f8a0b2c4d6e}
+    # لا قيمة افتراضية عمدًا. القيمة الافتراضية السابقة كانت منشورة في هذا
+    # المستودع، فنشرٌ ينسى ضبط المتغيّر كان سيوقّع توكنات بمفتاح يعرفه الجميع
+    # — وهو أسوأ أنواع الأعطال لأنه صامت. الآن تفشل الخدمة عند الإقلاع.
+    secret: ${JWT_SECRET}
     issuer: topchoice-identity
     access-ttl-seconds: ${JWT_ACCESS_TTL_SECONDS:900}
     refresh-ttl-seconds: ${JWT_REFRESH_TTL_SECONDS:2592000}

@@ -18,7 +18,9 @@ GCS="${STORAGE_EMULATOR_HOST:-http://fake-gcs:4443}"
 # المحاكيات تحتاج ثوانيَ لتقلع (Firestore و Pub/Sub على JVM). ننتظر كلًّا
 # منها بدل تثبيت `sleep` تعسفي يطول على جهاز بطيء ويقصر على آخر سريع.
 wait_for() {
-  name="$1"; url="$2"; tries=60
+  # ١٨٠ ثانية لا ٦٠: compose ينتظر فحص الصحة قبل تشغيلنا أصلًا، لكن هذه
+  # الحلقة هي الشبكة الأخيرة على جهاز محمّل تُبنى فيه الصور للتو.
+  name="$1"; url="$2"; tries=180
   while [ "$tries" -gt 0 ]; do
     if curl -fsS -o /dev/null "$url" 2>/dev/null; then
       echo "    ${name} ready"

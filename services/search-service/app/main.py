@@ -1,8 +1,9 @@
 from __future__ import annotations
 
 import logging
+from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
-from typing import Annotated, Any, AsyncIterator
+from typing import Annotated, Any
 
 from fastapi import FastAPI, HTTPException, Query, Request
 from fastapi.responses import ORJSONResponse
@@ -24,13 +25,24 @@ engine = SearchEngine(settings)
 indexer = CatalogIndexer(settings, engine)
 
 
+# حالة الفهرس مرفوعة إلى مستوى الوحدة لأن فحص الجاهزية يحتاجها.
+#
+# السبب من واقعة حقيقية: امتلاء القرص جعل OpenSearch يحجب إنشاء الفهارس،
+# فبُني الفهرس ديناميكيًا بحقول text بدل keyword. البحث صار يفشل بـ 503 بينما
+# الحاوية تُبلّغ «سليمة» لأن الفحص كان ينظر إلى صحة العنقود فقط. فحص لا يرى
+# العطل أسوأ من غياب الفحص، لأنه يمنح ثقة كاذبة.
+_index_ready = False
+
+
 @asynccontextmanager
 async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
+    global _index_ready
     # لا نبدأ الاستهلاك قبل جاهزية الفهرس، وإلا ضاعت أول دفعة أحداث
-    if not await engine.ensure_index():
-        log.error("starting without a usable index — search will return empty results")
+    _index_ready = await engine.ensure_index()
+    if not _index_ready:
+        log.error("بدء التشغيل بلا فهرس صالح — /health/ready سيبقى 503 حتى يُصلَح")
     await indexer.start()
-    log.info("search-service ready")
+    log.info("search-service ready (index_ready=%s)", _index_ready)
     yield
     await indexer.stop()
     await engine.close()
@@ -65,9 +77,22 @@ async def live() -> dict[str, str]:
 async def ready() -> dict[str, Any]:
     try:
         health = await engine.health()
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:
         # OpenSearch هو مخزن البحث نفسه — سقوطه يعني عدم الجاهزية
         raise HTTPException(status_code=503, detail={"status": "DOWN", "reason": str(exc)}) from exc
+
+    # عنقود سليم لا يكفي: الفهرس قد يكون غائبًا أو مبنيًا بخريطة خاطئة، وحينها
+    # يعمل كل شيء ما عدا البحث نفسه — وهو الغرض الوحيد من هذه الخدمة.
+    if not _index_ready:
+        raise HTTPException(
+            status_code=503,
+            detail={
+                "status": "DOWN",
+                "reason": "INDEX_NOT_READY",
+                "index": settings.opensearch_index,
+            },
+        )
+
     return {"status": "UP", "opensearch": health, "indexer": indexer.stats}
 
 
@@ -120,7 +145,7 @@ async def search(
         )
     except HTTPException:
         raise
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:
         log.exception("search failed")
         raise HTTPException(status_code=503, detail={
             "code": "SEARCH_UNAVAILABLE",
@@ -155,5 +180,15 @@ async def reindex(request: Request) -> dict[str, Any]:
     """
     if not request.headers.get("x-internal-caller"):
         raise HTTPException(status_code=403, detail={"code": "INTERNAL_ONLY"})
-    await engine.ensure_index()
+
+    # نحدّث العلم: هذا المسار هو طريق التعافي بعد إصلاح سبب الحجب، فيجب أن
+    # يعيد الخدمة إلى الجاهزية دون إعادة تشغيل الحاوية.
+    global _index_ready
+    _index_ready = await engine.ensure_index()
+    if not _index_ready:
+        raise HTTPException(
+            status_code=503,
+            detail={"code": "INDEX_UNAVAILABLE", "index": settings.opensearch_index},
+        )
+
     return {"status": "ok", "index": settings.opensearch_index, "stats": indexer.stats}

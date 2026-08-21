@@ -83,9 +83,12 @@ export default async function ProductPage({ params }: PageProps) {
 
   return (
     <div className="mx-auto max-w-7xl space-y-8 px-4 py-6">
+      {/*
+        الحقن هنا آمن: المحتوى ناتج JSON.stringify على كائن نبنيه نحن، لا نص
+        من المستخدم. وهي الطريقة الوحيدة لإخراج JSON-LD في React.
+      */}
       <script
         type="application/ld+json"
-        // eslint-disable-next-line react/no-danger
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
       />
 
